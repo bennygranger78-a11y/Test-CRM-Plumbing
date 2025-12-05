@@ -35,14 +35,29 @@ const viewContainer = document.getElementById('view-container');
 const pageTitle = document.getElementById('page-title');
 const navItems = document.querySelectorAll('.nav-item');
 const dateDisplay = document.getElementById('current-date-display');
-syncData().catch(err => {
-    console.error("Sync Failed:", err);
-    alert("Database Error: " + err.message + "\n\nCheck console for details.");
-});
+
+// --- Main Initialization ---
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        // 1. Setup Navigation & Modals
+        setupNavigation();
+        setupModalLogic();
+        setupActionMenuLogic();
+
+        // 2. Set Date Header
+        if (dateDisplay) {
+            dateDisplay.innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        // 3. Start Data Sync
+        syncData().catch(err => {
+            console.error("Sync Failed:", err);
+            alert("Database Error: " + err.message + "\n\nCheck console for details.");
+        });
     } catch (e) {
-    console.error("Init Error:", e);
-    alert("Initialization Error: " + e.message);
-}
+        console.error("Init Error:", e);
+        alert("Initialization Error: " + e.message);
+    }
 });
 
 // --- Firebase Data Sync ---
