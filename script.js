@@ -369,13 +369,18 @@ function setupActionMenuLogic() {
             const jobId = btn.dataset.id;
             activeActionJobId = jobId;
 
-            // DEBUGGING MODE
-            alert("Debug: Menu Clicked for Job " + jobId);
+            // Position menu (Align Right)
+            const rect = btn.getBoundingClientRect();
+            const menuWidth = 180;
+            let left = rect.right - menuWidth;
+            if (left < 10) left = 10;
 
-            // Force Center Screen
-            menu.style.top = "50%";
-            menu.style.left = "50%";
-            menu.style.transform = "translate(-50%, -50%)"; // Center alignment
+            // Fixed Position: No scroll offset needed
+            menu.style.top = `${rect.bottom + 5}px`;
+            menu.style.left = `${left}px`;
+
+            // Force visibility
+            menu.style.display = 'flex';
             menu.classList.remove('hidden');
             return;
         }
