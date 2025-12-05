@@ -1,6 +1,6 @@
 // --- Firebase Imports (CDN) ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-import { getFirestore, collection, getDocs, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+import { getFirestore, collection, getDocs, addDoc, onSnapshot, query, orderBy, deleteDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
 // --- Firebase Config ---
 const firebaseConfig = {
@@ -34,26 +34,14 @@ const viewContainer = document.getElementById('view-container');
 const pageTitle = document.getElementById('page-title');
 const navItems = document.querySelectorAll('.nav-item');
 const dateDisplay = document.getElementById('current-date-display');
-
-// --- Main Initialization ---
-document.addEventListener('DOMContentLoaded', () => {
-    try {
-        // 1. Setup Navigation & Modals
-        setupNavigation();
-        setupModalLogic();
-
-        // 2. Set Date Header
-        dateDisplay.innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-        // 3. Start Data Sync
-        syncData().catch(err => {
-            console.error("Sync Failed:", err);
-            alert("Database Error: " + err.message + "\n\nCheck console for details.");
-        });
+syncData().catch(err => {
+    console.error("Sync Failed:", err);
+    alert("Database Error: " + err.message + "\n\nCheck console for details.");
+});
     } catch (e) {
-        console.error("Init Error:", e);
-        alert("Initialization Error: " + e.message);
-    }
+    console.error("Init Error:", e);
+    alert("Initialization Error: " + e.message);
+}
 });
 
 // --- Firebase Data Sync ---
@@ -117,12 +105,12 @@ function refreshCurrentView() {
 // --- Seeding Logic (Run once) ---
 async function seedDatabase() {
     const initialJobs = [
-        { title: 'Leaky Faucet Repair', client: 'Alice Johnson', time: '09:00', duration: '1h', type: 'job', status: 'pending', date: '2025-12-05' },
-        { title: 'Boiler Maintenance', client: 'TechCorp Offices', time: '11:00', duration: '2h', type: 'job', status: 'completed', date: '2025-12-05' },
-        { title: 'Emergency Pipe Burst', client: 'Bob Smith', time: '14:30', duration: '3h', type: 'urgent', status: 'pending', date: '2025-12-05' },
-        { title: 'Parts Delivery: Copper Pipes', client: 'Internal', time: '08:00', duration: '', type: 'delivery', status: 'arrived', date: '2025-12-05' },
-        { title: 'Invoice Due: #INV-2024-001', client: 'Sarah Connor', time: '17:00', duration: '', type: 'invoice', status: 'unpaid', date: '2025-12-05' },
-        { title: 'Bathroom Reno Quote', client: 'Mike Ross', time: '10:00', duration: '1h', type: 'quote', status: 'pending', date: '2025-12-06' }
+        { title: 'Leaky Faucet Repair', client: 'Alice Johnson', phone: '555-0101', email: 'alice@example.com', time: '09:00', duration: '1h', type: 'job', status: 'pending', date: '2025-12-05' },
+        { title: 'Boiler Maintenance', client: 'TechCorp Offices', phone: '555-0102', email: 'manager@techcorp.com', time: '11:00', duration: '2h', type: 'job', status: 'completed', date: '2025-12-05' },
+        { title: 'Emergency Pipe Burst', client: 'Bob Smith', phone: '555-0103', email: 'bob@example.com', time: '14:30', duration: '3h', type: 'urgent', status: 'pending', date: '2025-12-05' },
+        { title: 'Parts Delivery: Copper Pipes', client: 'Internal', phone: '', email: '', time: '08:00', duration: '', type: 'delivery', status: 'arrived', date: '2025-12-05' },
+        { title: 'Invoice Due: #INV-2024-001', client: 'Sarah Connor', phone: '555-0104', email: 'sarah@example.com', time: '17:00', duration: '', type: 'invoice', status: 'unpaid', date: '2025-12-05' },
+        { title: 'Bathroom Reno Quote', client: 'Mike Ross', phone: '555-0105', email: 'mike@example.com', time: '10:00', duration: '1h', type: 'quote', status: 'pending', date: '2025-12-06' }
     ];
 
     const initialMessages = [
@@ -227,8 +215,9 @@ function renderJobsView() {
                 <h4>${job.title}</h4>
                 <p style="color:var(--text-secondary)">${job.client} • ${job.date} @ ${job.time}</p>
             </div>
-            <div class="list-status">
+            <div class="list-status" style="display:flex; align-items:center; gap:8px;">
                 <span class="tag tag-${getStatusColor(job.status)}">${job.status}</span>
+                <button class="action-btn" onclick="openActionMenu(event, '${job.id}')"><i data-lucide="more-vertical"></i></button>
             </div>
         `;
         list.appendChild(card);
@@ -277,46 +266,150 @@ function renderInvoicesView() {
 }
 
 // --- Modal Logic ---
+// --- Modal & Action Logic ---
+let editingJobId = null; // Track if we are editing
+let activeActionJobId = null; // Track which job the open menu belongs to
+
 function setupModalLogic() {
     const modal = document.getElementById('modal-container');
     const closeBtn = document.getElementById('close-modal');
     const cancelBtn = document.getElementById('cancel-modal');
     const form = document.getElementById('new-job-form');
+    const modalTitle = document.querySelector('.modal-header h2');
+    const submitBtn = document.querySelector('.form-actions .btn-primary');
 
-    const closeModal = () => modal.classList.add('hidden');
+    const closeModal = () => {
+        modal.classList.add('hidden');
+        form.reset();
+        editingJobId = null; // Reset edit mode
+        modalTitle.innerText = "New Job";
+        submitBtn.innerText = "Create Job";
+    };
 
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 
-    // Form Submit
+    // Form Submit (Create OR Update)
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(form);
 
-            const newJob = {
+            const jobData = {
                 title: formData.get('title'),
                 client: formData.get('client'),
                 date: formData.get('date'),
                 time: formData.get('time'),
                 type: formData.get('type'),
                 duration: formData.get('duration'),
-                status: 'pending'
+                // Preserve status if editing, else default
+                status: editingJobId ? state.data.jobs.find(j => j.id === editingJobId).status : 'pending'
             };
 
             try {
-                // Add to Firestore
-                await addDoc(collection(db, "jobs"), newJob);
-                console.log("Job Created!", newJob);
+                if (editingJobId) {
+                    // UPDATE existing
+                    await updateDoc(doc(db, "jobs", editingJobId), jobData);
+                    console.log("Job Updated!", jobData);
+                } else {
+                    // CREATE new
+                    // Add default phone/email for new jobs (mocking)
+                    jobData.phone = '555-0000';
+                    jobData.email = 'client@example.com';
+                    await addDoc(collection(db, "jobs"), jobData);
+                    console.log("Job Created!", jobData);
+                }
                 closeModal();
-                form.reset();
             } catch (err) {
-                console.error("Error adding document: ", err);
+                console.error("Error saving job: ", err);
                 alert("Error saving job");
             }
         });
     }
+
+    // Expose open function for "Edit" action
+    window.openEditModal = (job) => {
+        editingJobId = job.id;
+        modalTitle.innerText = "Edit Job";
+        submitBtn.innerText = "Save Changes";
+
+        // Populate fields
+        form.elements['title'].value = job.title;
+        form.elements['client'].value = job.client;
+        form.elements['date'].value = job.date;
+        form.elements['time'].value = job.time;
+        form.elements['type'].value = job.type;
+        form.elements['duration'].value = job.duration || '';
+
+        modal.classList.remove('hidden');
+    };
 }
+
+function setupActionMenuLogic() {
+    const menu = document.getElementById('action-menu');
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.action-btn') && !e.target.closest('.action-menu')) {
+            menu.classList.add('hidden');
+        }
+    });
+
+    // Action Handlers
+    document.getElementById('action-call').addEventListener('click', () => {
+        const job = state.data.jobs.find(j => j.id === activeActionJobId);
+        if (job && job.phone) window.location.href = `tel:${job.phone}`;
+        else alert("No phone number for this client.");
+        menu.classList.add('hidden');
+    });
+
+    document.getElementById('action-email').addEventListener('click', () => {
+        const job = state.data.jobs.find(j => j.id === activeActionJobId);
+        if (job && job.email) window.location.href = `mailto:${job.email}`;
+        else alert("No email for this client.");
+        menu.classList.add('hidden');
+    });
+
+    document.getElementById('action-delete').addEventListener('click', async () => {
+        if (confirm("Are you sure you want to delete this job?")) {
+            try {
+                await deleteDoc(doc(db, "jobs", activeActionJobId));
+                console.log("Deleted", activeActionJobId);
+            } catch (e) { console.error(e); alert("Delete failed"); }
+        }
+        menu.classList.add('hidden');
+    });
+
+    document.getElementById('action-edit').addEventListener('click', () => {
+        const job = state.data.jobs.find(j => j.id === activeActionJobId);
+        if (job) window.openEditModal(job);
+        menu.classList.add('hidden');
+    });
+
+    document.getElementById('action-reschedule').addEventListener('click', () => {
+        const job = state.data.jobs.find(j => j.id === activeActionJobId);
+        if (job) {
+            window.openEditModal(job);
+            // Focus date input?
+        }
+        menu.classList.add('hidden');
+    });
+}
+
+// Helper to open menu (Called by button onclicks)
+window.openActionMenu = (e, jobId) => {
+    e.stopPropagation();
+    e.preventDefault();
+    activeActionJobId = jobId;
+    const menu = document.getElementById('action-menu');
+
+    // Position menu near the button
+    const rectal = e.currentTarget.getBoundingClientRect();
+    menu.style.top = `${rectal.bottom + window.scrollY + 5}px`;
+    menu.style.left = `${rectal.left + window.scrollX - 140}px`; // Align to left
+
+    menu.classList.remove('hidden');
+};
 
 // --- Calendar Logic ---
 function initCalendar() {
@@ -436,9 +529,16 @@ function renderDashboardActivity() {
         item.style.borderBottom = '1px solid #f1f5f9';
         item.style.display = 'flex';
         item.style.justifyContent = 'space-between';
+        item.style.alignItems = 'center';
         item.innerHTML = `
-            <span><strong>${event.time}</strong> - ${event.title}</span>
-            <span class="tag tag-${getStatusColor(event.status)}">${event.status}</span>
+            <div style="flex:1">
+                <strong>${event.time}</strong> - ${event.title} <br>
+                <small style="color:var(--text-secondary)">${event.client}</small>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <span class="tag tag-${getStatusColor(event.status)}">${event.status}</span>
+                <button class="action-btn" onclick="openActionMenu(event, '${event.id}')"><i data-lucide="more-vertical"></i></button>
+            </div>
         `;
         list.appendChild(item);
     });

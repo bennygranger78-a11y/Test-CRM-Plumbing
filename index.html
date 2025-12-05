@@ -152,7 +152,17 @@
         </div>
     </template>
 
-    <!-- MODAL: New Job -->
+    <!-- Quick Action Menu (Hidden by default, positioned via JS) -->
+    <div id="action-menu" class="action-menu hidden">
+        <button class="action-item" id="action-call"><i data-lucide="phone"></i> Call Client</button>
+        <button class="action-item" id="action-email"><i data-lucide="mail"></i> Email</button>
+        <button class="action-item" id="action-edit"><i data-lucide="edit-2"></i> Edit Job</button>
+        <button class="action-item" id="action-reschedule"><i data-lucide="calendar"></i> Reschedule</button>
+        <div class="menu-divider"></div>
+        <button class="action-item text-red" id="action-delete"><i data-lucide="trash-2"></i> Delete</button>
+    </div>
+
+    <!-- MODAL: New/Edit Job -->
     <div id="modal-container" class="modal-overlay hidden">
         <div class="modal-card">
             <div class="modal-header">
