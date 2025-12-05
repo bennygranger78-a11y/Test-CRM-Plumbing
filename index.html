@@ -84,13 +84,96 @@
         </main>
     </div>
 
-    <!-- Templates (To be populated in Phase 2) -->
+    <!-- Templates (Populated) -->
     <template id="template-dashboard">
-        <div class="view-placeholder">Dashboard Content Loaded</div>
+        <div class="dashboard-grid">
+            <!-- Stats Row -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-icon bg-blue"><i data-lucide="briefcase"></i></div>
+                    <div class="stat-info">
+                        <h3>Active Jobs</h3>
+                        <p class="stat-value" id="stat-active">--</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon bg-green"><i data-lucide="dollar-sign"></i></div>
+                    <div class="stat-info">
+                        <h3>Unpaid</h3>
+                        <p class="stat-value" id="stat-unpaid">--</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Section -->
+            <div class="section-container">
+                <div class="section-header">
+                    <h2><i data-lucide="clock"></i> Today's Activity</h2>
+                </div>
+                <div id="dashboard-activity-list" class="activity-list">
+                    <p class="empty-state">Loading activity...</p>
+                </div>
+            </div>
+        </div>
     </template>
-    <template id="template-calendar"></template>
-    <template id="template-jobs"></template>
-    <template id="template-invoices"></template>
+
+    <template id="template-calendar">
+        <div class="calendar-layout">
+            <div class="calendar-sidebar">
+                <div class="cal-nav">
+                    <button class="icon-btn" id="prev-month"><i data-lucide="chevron-left"></i></button>
+                    <h3 id="calendar-month-year">...</h3>
+                    <button class="icon-btn" id="next-month"><i data-lucide="chevron-right"></i></button>
+                </div>
+                <div id="mini-calendar-grid" class="mini-cal"></div>
+            </div>
+            <div class="day-view">
+                <div class="day-header">
+                    <h2 id="selected-date-title">Today</h2>
+                </div>
+                <div id="day-timeline" class="timeline">
+                    <!-- Timeline Items -->
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="template-jobs">
+        <div class="view-header">
+            <h2>Job Management</h2>
+            <div class="filters">
+                <span class="filter-tab active">All</span>
+                <span class="filter-tab">Pending</span>
+                <span class="filter-tab">Completed</span>
+            </div>
+        </div>
+        <div id="jobs-list" class="list-container">
+            <p class="empty-state">Loading jobs...</p>
+        </div>
+    </template>
+
+    <template id="template-invoices">
+        <div class="view-header">
+            <h2>Quotes & Invoices</h2>
+            <button class="btn btn-primary" id="btn-create-invoice">Create New</button>
+        </div>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Client</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="invoices-list">
+                    <!-- Rows -->
+                </tbody>
+            </table>
+        </div>
+    </template>
 
     <!-- Global Components (Modal, Menu) - To be populated in Phase 4/5 -->
     <div id="modal-container" class="modal-overlay hidden">
