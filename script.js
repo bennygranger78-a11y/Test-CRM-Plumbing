@@ -297,6 +297,18 @@ function setupModalLogic() {
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 
+    // RESTORED: New Job Button Listener
+    const newJobBtn = document.getElementById('btn-new-job');
+    if (newJobBtn) {
+        newJobBtn.addEventListener('click', () => {
+            modal.classList.remove('hidden');
+            form.reset();
+            editingJobId = null;
+            modalTitle.innerText = "New Job";
+            submitBtn.innerText = "Create Job";
+        });
+    }
+
     // Form Submit (Create OR Update)
     if (form) {
         form.addEventListener('submit', async (e) => {
