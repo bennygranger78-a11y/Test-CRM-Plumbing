@@ -37,8 +37,9 @@ const dateDisplay = document.getElementById('current-date-display');
 
 // --- Main Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Setup Navigation
+    // 1. Setup Navigation & Modals
     setupNavigation();
+    setupModalLogic();
 
     // 2. Set Date Header
     dateDisplay.innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -93,13 +94,8 @@ function setupListeners() {
 
 function refreshCurrentView() {
     // Re-render the current active view with new data
-    if (state.currentView === 'calendar') {
-        renderMiniCalendar();
-        renderDayTimeline();
-    } else if (state.currentView === 'dashboard') {
-        renderDashboardActivity();
-        updateDashboardStats();
-    }
+    // If we are in a list view, we might want to re-render the whole list
+    renderView(state.currentView);
 }
 
 // --- Seeding Logic (Run once) ---
@@ -112,8 +108,218 @@ async function seedDatabase() {
         { title: 'Invoice Due: #INV-2024-001', client: 'Sarah Connor', time: '17:00', duration: '', type: 'invoice', status: 'unpaid', date: '2025-12-05' },
         { title: 'Bathroom Reno Quote', client: 'Mike Ross', time: '10:00', duration: '1h', type: 'quote', status: 'pending', date: '2025-12-06' }
     ];
+
+    const initialMessages = [
+        { from: 'Alice Johnson', text: 'Is the plumber still coming at 9?', time: '08:45', date: '2025-12-05' },
+        { from: 'Supplier', text: 'Your copper fittings are on backorder.', time: '09:15', date: '2025-12-05' }
+    ];
+
+    for (const job of initialJobs) {
+        await addDoc(collection(db, "jobs"), job);
+    }
+    for (const msg of initialMessages) {
+        await addDoc(collection(db, "messages"), msg);
+    }
+    console.log("Seeding Complete!");
+}
+
+// --- Navigation & View Logic ---
+function setupNavigation() {
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const viewName = item.dataset.view;
+
+            navItems.forEach(nav => nav.classList.remove('active'));
+            item.classList.add('active');
+
+            state.currentView = viewName;
+            renderView(viewName);
+        });
+    });
+
+    // UI Event: New Job Button (Desktop)
+    const btnNewJob = document.getElementById('btn-new-job');
+    if (btnNewJob) {
+        btnNewJob.addEventListener('click', () => {
+            const modal = document.getElementById('modal-container');
+            if (modal) modal.classList.remove('hidden');
+        });
+    }
+
+    // Initial Render
+    renderView('dashboard');
+}
+
+function renderView(viewName) {
+    viewContainer.innerHTML = '';
+
+    // Handle View Rendering
+    if (viewName === 'dashboard') {
+        const template = document.getElementById('template-dashboard');
+        viewContainer.appendChild(template.content.cloneNode(true));
+        pageTitle.innerText = 'Dashboard Overview';
+        requestAnimationFrame(() => {
+            renderDashboardActivity();
+            updateDashboardStats();
+        });
+
+    } else if (viewName === 'calendar') {
+        const template = document.getElementById('template-calendar');
+        viewContainer.appendChild(template.content.cloneNode(true));
+        pageTitle.innerText = 'Daily Schedule';
+        requestAnimationFrame(() => initCalendar());
+
+    } else if (viewName === 'jobs') {
+        const template = document.getElementById('template-jobs');
+        viewContainer.appendChild(template.content.cloneNode(true));
+        pageTitle.innerText = 'All Jobs';
+        requestAnimationFrame(() => renderJobsView());
+
+    } else if (viewName === 'messages') {
+        const template = document.getElementById('template-messages');
+        viewContainer.appendChild(template.content.cloneNode(true));
+        pageTitle.innerText = 'Inbox';
+        requestAnimationFrame(() => renderMessagesView());
+
+    } else if (viewName === 'invoices') {
+        const template = document.getElementById('template-invoices');
+        viewContainer.appendChild(template.content.cloneNode(true));
+        pageTitle.innerText = 'Quotes & Invoices';
+        requestAnimationFrame(() => renderInvoicesView());
+
+    } else {
+        viewContainer.innerHTML = `<div style="text-align:center; padding: 40px;">Under Construction</div>`;
+    }
+    lucide.createIcons();
+}
+
+// --- Specific View Renderers ---
+function renderJobsView() {
+    const list = document.getElementById('jobs-list');
+    if (!list) return;
+
+    // Sort by date/time
+    const jobs = [...state.data.jobs].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+
+    list.innerHTML = '';
+    jobs.forEach(job => {
+        const card = document.createElement('div');
+        card.className = 'list-item-card';
+        card.innerHTML = `
+            <div class="list-info">
+                <h4>${job.title}</h4>
+                <p style="color:var(--text-secondary)">${job.client} • ${job.date} @ ${job.time}</p>
+            </div>
+            <div class="list-status">
+                <span class="tag tag-${getStatusColor(job.status)}">${job.status}</span>
+            </div>
+        `;
+        list.appendChild(card);
+    });
+}
+
+function renderMessagesView() {
+    const list = document.getElementById('messages-list');
+    if (!list) return;
+
+    state.data.messages.forEach(msg => {
+        const card = document.createElement('div');
+        card.className = 'list-item-card';
+        card.innerHTML = `
+            <div class="list-info">
+                <h4>${msg.from}</h4>
+                <p>${msg.text}</p>
+            </div>
+            <div class="list-meta" style="text-align:right">
+                <p style="font-size:0.8rem; color:var(--text-secondary)">${msg.date} ${msg.time}</p>
+            </div>
+        `;
+        list.appendChild(card);
+    });
+}
+
+function renderInvoicesView() {
+    const tbody = document.getElementById('invoices-list');
+    if (!tbody) return;
+
+    // Filter for invoices/quotes
+    const invoices = state.data.jobs.filter(j => j.type === 'invoice' || j.type === 'quote');
+
+    tbody.innerHTML = '';
+    invoices.forEach(inv => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>#${inv.id ? inv.id.substring(0, 6) : 'PEND'}...</td>
+            <td>${inv.client}</td>
+            <td>${inv.date}</td>
+            <td><span class="tag tag-${inv.status === 'unpaid' ? 'red' : 'green'}">${inv.status}</span></td>
+            <td><strong>$150.00</strong></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// --- Modal Logic ---
+function setupModalLogic() {
+    const modal = document.getElementById('modal-container');
+    const closeBtn = document.getElementById('close-modal');
+    const cancelBtn = document.getElementById('cancel-modal');
+    const form = document.getElementById('new-job-form');
+
+    const closeModal = () => modal.classList.add('hidden');
+
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+    // Form Submit
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+
+            const newJob = {
+                title: formData.get('title'),
+                client: formData.get('client'),
+                date: formData.get('date'),
+                time: formData.get('time'),
+                type: formData.get('type'),
+                duration: formData.get('duration'),
+                status: 'pending'
+            };
+
+            try {
+                // Add to Firestore
+                await addDoc(collection(db, "jobs"), newJob);
+                console.log("Job Created!", newJob);
+                closeModal();
+                form.reset();
+            } catch (err) {
+                console.error("Error adding document: ", err);
+                alert("Error saving job");
+            }
+        });
+    }
+}
+
+// --- Calendar Logic ---
+function initCalendar() {
     renderMiniCalendar();
-});
+    renderDayTimeline();
+
+    // Re-attach listeners since they are destroyed on view switch
+    const prevBtn = document.getElementById('prev-month');
+    const nextBtn = document.getElementById('next-month');
+
+    if (prevBtn) prevBtn.addEventListener('click', () => {
+        state.currentMonth.setMonth(state.currentMonth.getMonth() - 1);
+        renderMiniCalendar();
+    });
+
+    if (nextBtn) nextBtn.addEventListener('click', () => {
+        state.currentMonth.setMonth(state.currentMonth.getMonth() + 1);
+        renderMiniCalendar();
+    });
 }
 
 function renderMiniCalendar() {
@@ -201,11 +407,9 @@ function renderDashboardActivity() {
     const list = document.getElementById('dashboard-activity-list');
     if (!list) return;
 
-    list.innerHTML = ''; // Start clean
+    list.innerHTML = '';
 
-    // Mock "Today" as 2025-12-05 for the demo, otherwise use real today: new Date().toISOString().split('T')[0]
-    // For specific demo consistency we check both or just show all recent
-    const todayStr = '2025-12-05';
+    const todayStr = new Date().toISOString().split('T')[0]; // Use real today
     const events = state.data.jobs.filter(j => j.date === todayStr);
 
     if (events.length === 0) list.innerHTML = '<p style="padding:10px; color:#94a3b8">Quiet day today.</p>';
@@ -218,23 +422,21 @@ function renderDashboardActivity() {
         item.style.justifyContent = 'space-between';
         item.innerHTML = `
             <span><strong>${event.time}</strong> - ${event.title}</span>
-            <span class="tag" style="background: #e2e8f0; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">${event.status}</span>
+            <span class="tag tag-${getStatusColor(event.status)}">${event.status}</span>
         `;
         list.appendChild(item);
     });
 }
 
 function updateDashboardStats() {
-    // Dynamic Stats Calculation
     const activeJobs = state.data.jobs.filter(j => j.status === 'pending' || j.type === 'job').length;
     const unpaid = state.data.jobs.filter(j => j.type === 'invoice' && j.status === 'unpaid').length;
-    // ... we could calculate dollar amounts if we had value fields, for now hardcoded or count driven
 
     const activeVal = document.querySelector('.stat-card:nth-child(1) .stat-value');
     if (activeVal) activeVal.innerText = activeJobs;
 
     const unpaidVal = document.querySelector('.stat-card:nth-child(2) .stat-value');
-    if (unpaidVal) unpaidVal.innerText = unpaid; // showing count for simplicity
+    if (unpaidVal) unpaidVal.innerText = unpaid;
 }
 
 
@@ -250,4 +452,12 @@ function getTypeColor(type) {
     if (type === 'delivery') return '#f59e0b';
     if (type === 'invoice') return '#3b82f6';
     return '#0f172a';
+}
+
+function getStatusColor(status) {
+    if (status === 'completed') return 'green';
+    if (status === 'pending') return 'orange';
+    if (status === 'unpaid') return 'red';
+    if (status === 'arrived') return 'blue';
+    return 'blue';
 }
