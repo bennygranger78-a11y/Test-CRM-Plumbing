@@ -199,6 +199,28 @@ function renderView(viewName) {
         const template = document.getElementById('template-invoices');
         viewContainer.appendChild(template.content.cloneNode(true));
         pageTitle.innerText = 'Quotes & Invoices';
+
+        // Listener for "Create New" Invoice Button
+        const createInvBtn = viewContainer.querySelector('.btn-primary');
+        if (createInvBtn) {
+            createInvBtn.addEventListener('click', () => {
+                const modal = document.getElementById('modal-container');
+                const form = document.getElementById('new-job-form');
+                const modalTitle = document.querySelector('.modal-header h2');
+                const submitBtn = document.querySelector('.form-actions .btn-primary');
+
+                form.reset();
+                editingJobId = null;
+
+                // Pre-select Invoice type
+                if (form.elements['type']) form.elements['type'].value = 'invoice';
+
+                modalTitle.innerText = "New Invoice";
+                submitBtn.innerText = "Create Invoice";
+                modal.classList.remove('hidden');
+            });
+        }
+
         requestAnimationFrame(() => renderInvoicesView());
 
     } else {
@@ -218,6 +240,7 @@ function renderJobsView() {
     jobs.forEach(job => {
         const card = document.createElement('div');
         card.className = 'list-item-card';
+        card.style.cursor = 'pointer'; // Indicate clickable
         card.innerHTML = `
             <div class="list-info">
                 <h4>${job.title}</h4>
@@ -228,6 +251,15 @@ function renderJobsView() {
                 <button class="action-btn" data-id="${job.id}"><i data-lucide="more-vertical"></i></button>
             </div>
         `;
+
+        // Row Click to Edit
+        card.addEventListener('click', (e) => {
+            // Check if we clicked the action button (don't trigger edit if so)
+            if (!e.target.closest('.action-btn')) {
+                window.openEditModal(job);
+            }
+        });
+
         list.appendChild(card);
     });
 }
