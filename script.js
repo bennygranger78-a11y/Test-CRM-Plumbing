@@ -356,165 +356,89 @@ function setupModalLogic() {
         form.elements['time'].value = job.time;
         form.elements['type'].value = job.type;
         form.elements['duration'].value = job.duration || '';
+        // Re-attach listeners since they are destroyed on view switch
+        const prevBtn = document.getElementById('prev-month');
+        const nextBtn = document.getElementById('next-month');
 
-        modal.classList.remove('hidden');
-    };
-}
-
-function setupActionMenuLogic() {
-    const menu = document.getElementById('action-menu');
-
-    // Close menu when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.action-btn') && !e.target.closest('.action-menu')) {
-            menu.classList.add('hidden');
-        }
-    });
-
-    // Action Handlers
-    document.getElementById('action-call').addEventListener('click', () => {
-        const job = state.data.jobs.find(j => j.id === activeActionJobId);
-        if (job && job.phone) window.location.href = `tel:${job.phone}`;
-        else alert("No phone number for this client.");
-        menu.classList.add('hidden');
-    });
-
-    document.getElementById('action-email').addEventListener('click', () => {
-        const job = state.data.jobs.find(j => j.id === activeActionJobId);
-        if (job && job.email) window.location.href = `mailto:${job.email}`;
-        else alert("No email for this client.");
-        menu.classList.add('hidden');
-    });
-
-    document.getElementById('action-delete').addEventListener('click', async () => {
-        if (confirm("Are you sure you want to delete this job?")) {
-            try {
-                await deleteDoc(doc(db, "jobs", activeActionJobId));
-                console.log("Deleted", activeActionJobId);
-            } catch (e) { console.error(e); alert("Delete failed"); }
-        }
-        menu.classList.add('hidden');
-    });
-
-    document.getElementById('action-edit').addEventListener('click', () => {
-        const job = state.data.jobs.find(j => j.id === activeActionJobId);
-        if (job) window.openEditModal(job);
-        menu.classList.add('hidden');
-    });
-
-    document.getElementById('action-reschedule').addEventListener('click', () => {
-        const job = state.data.jobs.find(j => j.id === activeActionJobId);
-        if (job) {
-            window.openEditModal(job);
-            // Focus date input?
-        }
-        menu.classList.add('hidden');
-    });
-}
-
-// Helper to open menu (Called by button onclicks)
-window.openActionMenu = (e, jobId) => {
-    e.stopPropagation();
-    e.preventDefault();
-    activeActionJobId = jobId;
-    const menu = document.getElementById('action-menu');
-
-    // Position menu near the button
-    const rectal = e.currentTarget.getBoundingClientRect();
-    menu.style.top = `${rectal.bottom + window.scrollY + 5}px`;
-    menu.style.left = `${rectal.left + window.scrollX - 140}px`; // Align to left
-
-    menu.classList.remove('hidden');
-};
-
-// --- Calendar Logic ---
-function initCalendar() {
-    renderMiniCalendar();
-    renderDayTimeline();
-
-    // Re-attach listeners since they are destroyed on view switch
-    const prevBtn = document.getElementById('prev-month');
-    const nextBtn = document.getElementById('next-month');
-
-    if (prevBtn) prevBtn.addEventListener('click', () => {
-        state.currentMonth.setMonth(state.currentMonth.getMonth() - 1);
-        renderMiniCalendar();
-    });
-
-    if (nextBtn) nextBtn.addEventListener('click', () => {
-        state.currentMonth.setMonth(state.currentMonth.getMonth() + 1);
-        renderMiniCalendar();
-    });
-}
-
-function renderMiniCalendar() {
-    const grid = document.getElementById('mini-calendar-grid');
-    const monthYear = document.getElementById('calendar-month-year');
-    if (!grid || !monthYear) return;
-
-    monthYear.innerText = state.currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    grid.innerHTML = '';
-
-    const year = state.currentMonth.getFullYear();
-    const month = state.currentMonth.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    for (let i = 0; i < firstDay; i++) {
-        grid.appendChild(document.createElement('div'));
-    }
-
-    for (let i = 1; i <= daysInMonth; i++) {
-        const dayEl = document.createElement('div');
-        dayEl.className = 'calendar-day';
-        dayEl.innerText = i;
-
-        const thisDate = new Date(year, month, i);
-        if (isSameDate(thisDate, state.selectedDate)) {
-            dayEl.classList.add('selected');
-        }
-
-        const dateStr = thisDate.toISOString().split('T')[0];
-        const hasEvents = state.data.jobs.some(j => j.date === dateStr);
-        if (hasEvents) dayEl.classList.add('has-event');
-
-        dayEl.addEventListener('click', () => {
-            state.selectedDate = thisDate;
+        if (prevBtn) prevBtn.addEventListener('click', () => {
+            state.currentMonth.setMonth(state.currentMonth.getMonth() - 1);
             renderMiniCalendar();
-            renderDayTimeline();
         });
 
-        grid.appendChild(dayEl);
-    }
-}
-
-function renderDayTimeline() {
-    const timeline = document.getElementById('day-timeline');
-    const title = document.getElementById('selected-date-title');
-    if (!timeline) return;
-
-    title.innerText = state.selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-
-    const dateStr = state.selectedDate.toISOString().split('T')[0];
-    const events = state.data.jobs.filter(j => j.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
-
-    timeline.innerHTML = '';
-
-    if (events.length === 0) {
-        timeline.innerHTML = '<p style="color: #94a3b8; padding: 20px;">No events scheduled for this day.</p>';
-        return;
+        if (nextBtn) nextBtn.addEventListener('click', () => {
+            state.currentMonth.setMonth(state.currentMonth.getMonth() + 1);
+            renderMiniCalendar();
+        });
     }
 
-    events.forEach(event => {
-        const el = document.createElement('div');
-        el.className = 'timeline-item';
+    function renderMiniCalendar() {
+        const grid = document.getElementById('mini-calendar-grid');
+        const monthYear = document.getElementById('calendar-month-year');
+        if (!grid || !monthYear) return;
 
-        let iconName = 'briefcase';
-        if (event.type === 'delivery') iconName = 'package';
-        if (event.type === 'urgent') iconName = 'alert-circle';
-        if (event.type === 'invoice') iconName = 'file-text';
+        monthYear.innerText = state.currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        grid.innerHTML = '';
 
-        el.innerHTML = `
+        const year = state.currentMonth.getFullYear();
+        const month = state.currentMonth.getMonth();
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        for (let i = 0; i < firstDay; i++) {
+            grid.appendChild(document.createElement('div'));
+        }
+
+        for (let i = 1; i <= daysInMonth; i++) {
+            const dayEl = document.createElement('div');
+            dayEl.className = 'calendar-day';
+            dayEl.innerText = i;
+
+            const thisDate = new Date(year, month, i);
+            if (isSameDate(thisDate, state.selectedDate)) {
+                dayEl.classList.add('selected');
+            }
+
+            const dateStr = thisDate.toISOString().split('T')[0];
+            const hasEvents = state.data.jobs.some(j => j.date === dateStr);
+            if (hasEvents) dayEl.classList.add('has-event');
+
+            dayEl.addEventListener('click', () => {
+                state.selectedDate = thisDate;
+                renderMiniCalendar();
+                renderDayTimeline();
+            });
+
+            grid.appendChild(dayEl);
+        }
+    }
+
+    function renderDayTimeline() {
+        const timeline = document.getElementById('day-timeline');
+        const title = document.getElementById('selected-date-title');
+        if (!timeline) return;
+
+        title.innerText = state.selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
+        const dateStr = state.selectedDate.toISOString().split('T')[0];
+        const events = state.data.jobs.filter(j => j.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
+
+        timeline.innerHTML = '';
+
+        if (events.length === 0) {
+            timeline.innerHTML = '<p style="color: #94a3b8; padding: 20px;">No events scheduled for this day.</p>';
+            return;
+        }
+
+        events.forEach(event => {
+            const el = document.createElement('div');
+            el.className = 'timeline-item';
+
+            let iconName = 'briefcase';
+            if (event.type === 'delivery') iconName = 'package';
+            if (event.type === 'urgent') iconName = 'alert-circle';
+            if (event.type === 'invoice') iconName = 'file-text';
+
+            el.innerHTML = `
             <div class="timeline-card" style="border-left: 4px solid ${getTypeColor(event.type)}">
                 <div class="timeline-time">${event.time}</div>
                 <div class="timeline-content">
@@ -523,30 +447,30 @@ function renderDayTimeline() {
                 </div>
             </div>
         `;
-        timeline.appendChild(el);
-    });
-    lucide.createIcons();
-}
+            timeline.appendChild(el);
+        });
+        lucide.createIcons();
+    }
 
-function renderDashboardActivity() {
-    const list = document.getElementById('dashboard-activity-list');
-    if (!list) return;
+    function renderDashboardActivity() {
+        const list = document.getElementById('dashboard-activity-list');
+        if (!list) return;
 
-    list.innerHTML = '';
+        list.innerHTML = '';
 
-    const todayStr = new Date().toISOString().split('T')[0]; // Use real today
-    const events = state.data.jobs.filter(j => j.date === todayStr);
+        const todayStr = new Date().toISOString().split('T')[0]; // Use real today
+        const events = state.data.jobs.filter(j => j.date === todayStr);
 
-    if (events.length === 0) list.innerHTML = '<p style="padding:10px; color:#94a3b8">Quiet day today.</p>';
+        if (events.length === 0) list.innerHTML = '<p style="padding:10px; color:#94a3b8">Quiet day today.</p>';
 
-    events.forEach(event => {
-        const item = document.createElement('div');
-        item.style.padding = '12px';
-        item.style.borderBottom = '1px solid #f1f5f9';
-        item.style.display = 'flex';
-        item.style.justifyContent = 'space-between';
-        item.style.alignItems = 'center';
-        item.innerHTML = `
+        events.forEach(event => {
+            const item = document.createElement('div');
+            item.style.padding = '12px';
+            item.style.borderBottom = '1px solid #f1f5f9';
+            item.style.display = 'flex';
+            item.style.justifyContent = 'space-between';
+            item.style.alignItems = 'center';
+            item.innerHTML = `
             <div style="flex:1">
                 <strong>${event.time}</strong> - ${event.title} <br>
                 <small style="color:var(--text-secondary)">${event.client}</small>
@@ -556,41 +480,41 @@ function renderDashboardActivity() {
                 <button class="action-btn" onclick="openActionMenu(event, '${event.id}')"><i data-lucide="more-vertical"></i></button>
             </div>
         `;
-        list.appendChild(item);
-    });
-    lucide.createIcons();
-}
+            list.appendChild(item);
+        });
+        lucide.createIcons();
+    }
 
-function updateDashboardStats() {
-    const activeJobs = state.data.jobs.filter(j => j.status === 'pending' || j.type === 'job').length;
-    const unpaid = state.data.jobs.filter(j => j.type === 'invoice' && j.status === 'unpaid').length;
+    function updateDashboardStats() {
+        const activeJobs = state.data.jobs.filter(j => j.status === 'pending' || j.type === 'job').length;
+        const unpaid = state.data.jobs.filter(j => j.type === 'invoice' && j.status === 'unpaid').length;
 
-    const activeVal = document.querySelector('.stat-card:nth-child(1) .stat-value');
-    if (activeVal) activeVal.innerText = activeJobs;
+        const activeVal = document.querySelector('.stat-card:nth-child(1) .stat-value');
+        if (activeVal) activeVal.innerText = activeJobs;
 
-    const unpaidVal = document.querySelector('.stat-card:nth-child(2) .stat-value');
-    if (unpaidVal) unpaidVal.innerText = unpaid;
-}
+        const unpaidVal = document.querySelector('.stat-card:nth-child(2) .stat-value');
+        if (unpaidVal) unpaidVal.innerText = unpaid;
+    }
 
 
-// --- Utility ---
-function isSameDate(d1, d2) {
-    return d1.getFullYear() === d2.getFullYear() &&
-        d1.getMonth() === d2.getMonth() &&
-        d1.getDate() === d2.getDate();
-}
+    // --- Utility ---
+    function isSameDate(d1, d2) {
+        return d1.getFullYear() === d2.getFullYear() &&
+            d1.getMonth() === d2.getMonth() &&
+            d1.getDate() === d2.getDate();
+    }
 
-function getTypeColor(type) {
-    if (type === 'urgent') return '#ef4444';
-    if (type === 'delivery') return '#f59e0b';
-    if (type === 'invoice') return '#3b82f6';
-    return '#0f172a';
-}
+    function getTypeColor(type) {
+        if (type === 'urgent') return '#ef4444';
+        if (type === 'delivery') return '#f59e0b';
+        if (type === 'invoice') return '#3b82f6';
+        return '#0f172a';
+    }
 
-function getStatusColor(status) {
-    if (status === 'completed') return 'green';
-    if (status === 'pending') return 'orange';
-    if (status === 'unpaid') return 'red';
-    if (status === 'arrived') return 'blue';
-    return 'blue';
-}
+    function getStatusColor(status) {
+        if (status === 'completed') return 'green';
+        if (status === 'pending') return 'orange';
+        if (status === 'unpaid') return 'red';
+        if (status === 'arrived') return 'blue';
+        return 'blue';
+    }
