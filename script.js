@@ -375,8 +375,9 @@ function setupActionMenuLogic() {
             let left = rect.right - menuWidth;
             if (left < 10) left = 10; // Safety guard
 
-            menu.style.top = `${rect.bottom + window.scrollY + 5}px`;
-            menu.style.left = `${left + window.scrollX}px`;
+            // Fixed Position: No scroll offset needed
+            menu.style.top = `${rect.bottom + 5}px`;
+            menu.style.left = `${left}px`;
             menu.classList.remove('hidden');
             return;
         }
