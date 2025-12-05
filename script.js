@@ -148,85 +148,63 @@ function setupNavigation() {
     navItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
-            const viewName = item.dataset.view;
 
-            navItems.forEach(nav => nav.classList.remove('active'));
-            item.classList.add('active');
+            function renderView(viewName) {
+                viewContainer.innerHTML = '';
 
-            state.currentView = viewName;
-            renderView(viewName);
-        });
-    });
+                // Handle View Rendering
+                if (viewName === 'dashboard') {
+                    const template = document.getElementById('template-dashboard');
+                    viewContainer.appendChild(template.content.cloneNode(true));
+                    pageTitle.innerText = 'Dashboard Overview';
+                    requestAnimationFrame(() => {
+                        renderDashboardActivity();
+                        updateDashboardStats();
+                    });
 
-    // UI Event: New Job Button (Desktop)
-    const btnNewJob = document.getElementById('btn-new-job');
-    if (btnNewJob) {
-        btnNewJob.addEventListener('click', () => {
-            const modal = document.getElementById('modal-container');
-            if (modal) modal.classList.remove('hidden');
-        });
-    }
+                } else if (viewName === 'calendar') {
+                    const template = document.getElementById('template-calendar');
+                    viewContainer.appendChild(template.content.cloneNode(true));
+                    pageTitle.innerText = 'Daily Schedule';
+                    requestAnimationFrame(() => initCalendar());
 
-    // Initial Render
-    renderView('dashboard');
-}
+                } else if (viewName === 'jobs') {
+                    const template = document.getElementById('template-jobs');
+                    viewContainer.appendChild(template.content.cloneNode(true));
+                    pageTitle.innerText = 'All Jobs';
+                    requestAnimationFrame(() => renderJobsView());
 
-function renderView(viewName) {
-    viewContainer.innerHTML = '';
+                } else if (viewName === 'messages') {
+                    const template = document.getElementById('template-messages');
+                    viewContainer.appendChild(template.content.cloneNode(true));
+                    pageTitle.innerText = 'Inbox';
+                    requestAnimationFrame(() => renderMessagesView());
 
-    // Handle View Rendering
-    if (viewName === 'dashboard') {
-        const template = document.getElementById('template-dashboard');
-        viewContainer.appendChild(template.content.cloneNode(true));
-        pageTitle.innerText = 'Dashboard Overview';
-        requestAnimationFrame(() => {
-            renderDashboardActivity();
-            updateDashboardStats();
-        });
+                } else if (viewName === 'invoices') {
+                    const template = document.getElementById('template-invoices');
+                    viewContainer.appendChild(template.content.cloneNode(true));
+                    pageTitle.innerText = 'Quotes & Invoices';
+                    requestAnimationFrame(() => renderInvoicesView());
 
-    } else if (viewName === 'calendar') {
-        const template = document.getElementById('template-calendar');
-        viewContainer.appendChild(template.content.cloneNode(true));
-        pageTitle.innerText = 'Daily Schedule';
-        requestAnimationFrame(() => initCalendar());
+                } else {
+                    viewContainer.innerHTML = `<div style="text-align:center; padding: 40px;">Under Construction</div>`;
+                }
+                lucide.createIcons();
+            }
 
-    } else if (viewName === 'jobs') {
-        const template = document.getElementById('template-jobs');
-        viewContainer.appendChild(template.content.cloneNode(true));
-        pageTitle.innerText = 'All Jobs';
-        requestAnimationFrame(() => renderJobsView());
+            // --- Specific View Renderers ---
+            function renderJobsView() {
+                const list = document.getElementById('jobs-list');
+                if (!list) return;
 
-    } else if (viewName === 'messages') {
-        const template = document.getElementById('template-messages');
-        viewContainer.appendChild(template.content.cloneNode(true));
-        pageTitle.innerText = 'Inbox';
-        requestAnimationFrame(() => renderMessagesView());
+                // Sort by date/time
+                const jobs = [...state.data.jobs].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 
-    } else if (viewName === 'invoices') {
-        const template = document.getElementById('template-invoices');
-        viewContainer.appendChild(template.content.cloneNode(true));
-        pageTitle.innerText = 'Quotes & Invoices';
-        requestAnimationFrame(() => renderInvoicesView());
-
-    } else {
-        viewContainer.innerHTML = `<div style="text-align:center; padding: 40px;">Under Construction</div>`;
-    }
-    lucide.createIcons();
-}
-
-// --- Specific View Renderers ---
-function renderJobsView() {
-    const list = document.getElementById('jobs-list');
-    if (!list) return;
-
-    // Sort by date/time
-    const jobs = [...state.data.jobs].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-
-    list.innerHTML = '';
-    jobs.forEach(job => {
-        const card = document.createElement('div');
-        card.className = 'list-item-card';
-        card.innerHTML = `
+                list.innerHTML = '';
+                jobs.forEach(job => {
+                    const card = document.createElement('div');
+                    card.className = 'list-item-card';
+                    card.innerHTML = `
             <div class="list-info">
                 <h4>${job.title}</h4>
                 <p style="color:var(--text-secondary)">${job.client} • ${job.date} @ ${job.time}</p>
@@ -236,18 +214,18 @@ function renderJobsView() {
                 <button class="action-btn" onclick="openActionMenu(event, '${job.id}')"><i data-lucide="more-vertical"></i></button>
             </div>
         `;
-        list.appendChild(card);
-    });
-}
+                    list.appendChild(card);
+                });
+            }
 
-function renderMessagesView() {
-    const list = document.getElementById('messages-list');
-    if (!list) return;
+            function renderMessagesView() {
+                const list = document.getElementById('messages-list');
+                if (!list) return;
 
-    state.data.messages.forEach(msg => {
-        const card = document.createElement('div');
-        card.className = 'list-item-card';
-        card.innerHTML = `
+                state.data.messages.forEach(msg => {
+                    const card = document.createElement('div');
+                    card.className = 'list-item-card';
+                    card.innerHTML = `
             <div class="list-info">
                 <h4>${msg.from}</h4>
                 <p>${msg.text}</p>
@@ -256,189 +234,139 @@ function renderMessagesView() {
                 <p style="font-size:0.8rem; color:var(--text-secondary)">${msg.date} ${msg.time}</p>
             </div>
         `;
-        list.appendChild(card);
-    });
-}
+                    list.appendChild(card);
+                });
+            }
 
-function renderInvoicesView() {
-    const tbody = document.getElementById('invoices-list');
-    if (!tbody) return;
+            function renderInvoicesView() {
+                const tbody = document.getElementById('invoices-list');
+                if (!tbody) return;
 
-    // Filter for invoices/quotes
-    const invoices = state.data.jobs.filter(j => j.type === 'invoice' || j.type === 'quote');
+                // Filter for invoices/quotes
+                const invoices = state.data.jobs.filter(j => j.type === 'invoice' || j.type === 'quote');
 
-    tbody.innerHTML = '';
-    invoices.forEach(inv => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
+                tbody.innerHTML = '';
+                invoices.forEach(inv => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
             <td>#${inv.id ? inv.id.substring(0, 6) : 'PEND'}...</td>
             <td>${inv.client}</td>
             <td>${inv.date}</td>
             <td><span class="tag tag-${inv.status === 'unpaid' ? 'red' : 'green'}">${inv.status}</span></td>
             <td><strong>$150.00</strong></td>
         `;
-        tbody.appendChild(tr);
-    });
-}
+                    tbody.appendChild(tr);
+                });
+            }
 
-// --- Modal Logic ---
-// --- Modal & Action Logic ---
-let editingJobId = null; // Track if we are editing
-let activeActionJobId = null; // Track which job the open menu belongs to
+            // --- Modal Logic ---
+            // --- Modal & Action Logic ---
+            let editingJobId = null; // Track if we are editing
+            let activeActionJobId = null; // Track which job the open menu belongs to
 
-function setupModalLogic() {
-    const modal = document.getElementById('modal-container');
-    const closeBtn = document.getElementById('close-modal');
-    const cancelBtn = document.getElementById('cancel-modal');
-    const form = document.getElementById('new-job-form');
-    const modalTitle = document.querySelector('.modal-header h2');
-    const submitBtn = document.querySelector('.form-actions .btn-primary');
+            function setupModalLogic() {
+                const modal = document.getElementById('modal-container');
+                const closeBtn = document.getElementById('close-modal');
+                const cancelBtn = document.getElementById('cancel-modal');
+                const form = document.getElementById('new-job-form');
+                const modalTitle = document.querySelector('.modal-header h2');
+                const submitBtn = document.querySelector('.form-actions .btn-primary');
 
-    const closeModal = () => {
-        modal.classList.add('hidden');
-        form.reset();
-        editingJobId = null; // Reset edit mode
-        modalTitle.innerText = "New Job";
-        submitBtn.innerText = "Create Job";
-    };
+                const closeModal = () => {
+                    modal.classList.add('hidden');
+                    form.reset();
+                    editingJobId = null; // Reset edit mode
+                    modalTitle.innerText = "New Job";
+                    submitBtn.innerText = "Create Job";
+                };
 
-    if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+                if (closeBtn) closeBtn.addEventListener('click', closeModal);
+                if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 
-    // Form Submit (Create OR Update)
-    if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(form);
+                // Form Submit (Create OR Update)
+                if (form) {
+                    form.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const formData = new FormData(form);
 
-            const jobData = {
-                title: formData.get('title'),
-                client: formData.get('client'),
-                date: formData.get('date'),
-                time: formData.get('time'),
-                type: formData.get('type'),
-                duration: formData.get('duration'),
-                // Preserve status if editing, else default
-                status: editingJobId ? state.data.jobs.find(j => j.id === editingJobId).status : 'pending'
-            };
+                        const jobData = {
+                            title: formData.get('title'),
+                            client: formData.get('client'),
+                            date: formData.get('date'),
+                            time: formData.get('time'),
+                            type: formData.get('type'),
+                            duration: formData.get('duration'),
+                            // Preserve status if editing, else default
+                            status: editingJobId ? state.data.jobs.find(j => j.id === editingJobId).status : 'pending'
+                        };
 
-            try {
-                if (editingJobId) {
-                    // UPDATE existing
-                    await updateDoc(doc(db, "jobs", editingJobId), jobData);
-                    console.log("Job Updated!", jobData);
-                } else {
-                    // CREATE new
-                    // Add default phone/email for new jobs (mocking)
-                    jobData.phone = '555-0000';
-                    jobData.email = 'client@example.com';
-                    await addDoc(collection(db, "jobs"), jobData);
-                    console.log("Job Created!", jobData);
+                        try {
+                            if (editingJobId) {
+                                // UPDATE existing
+                                await updateDoc(doc(db, "jobs", editingJobId), jobData);
+                                console.log("Job Updated!", jobData);
+                            } else {
+                                // CREATE new
+                                // Add default phone/email for new jobs (mocking)
+                                jobData.phone = '555-0000';
+                                jobData.email = 'client@example.com';
+                                await addDoc(collection(db, "jobs"), jobData);
+                                console.log("Job Created!", jobData);
+                            }
+                            closeModal();
+                        } catch (err) {
+                            console.error("Error saving job: ", err);
+                            alert("Error saving job");
+                        }
+                    });
                 }
-                closeModal();
-            } catch (err) {
-                console.error("Error saving job: ", err);
-                alert("Error saving job");
-            }
-        });
-    }
 
-    // Expose open function for "Edit" action
-    window.openEditModal = (job) => {
-        editingJobId = job.id;
-        modalTitle.innerText = "Edit Job";
-        submitBtn.innerText = "Save Changes";
+                // Expose open function for "Edit" action
+                window.openEditModal = (job) => {
+                    editingJobId = job.id;
+                    modalTitle.innerText = "Edit Job";
+                    submitBtn.innerText = "Save Changes";
 
-        // Populate fields
-        form.elements['title'].value = job.title;
-        form.elements['client'].value = job.client;
-        form.elements['date'].value = job.date;
-        form.elements['time'].value = job.time;
-        form.elements['type'].value = job.type;
-        form.elements['duration'].value = job.duration || '';
-        // Re-attach listeners since they are destroyed on view switch
-        const prevBtn = document.getElementById('prev-month');
-        const nextBtn = document.getElementById('next-month');
+                    // Populate fields
+                    form.elements['title'].value = job.title;
+                    form.elements['client'].value = job.client;
+                    form.elements['date'].value = job.date;
+                    form.elements['time'].value = job.time;
+                    form.elements['type'].value = job.type;
+                    form.elements['duration'].value = job.duration || '';
+                    // Re-attach listeners since they are destroyed on view switch
+                    const prevBtn = document.getElementById('prev-month');
+                    const nextBtn = document.getElementById('next-month');
 
-        if (prevBtn) prevBtn.addEventListener('click', () => {
-            state.currentMonth.setMonth(state.currentMonth.getMonth() - 1);
-            renderMiniCalendar();
-        });
+                    if (prevBtn) prevBtn.addEventListener('click', () => {
+                        state.currentMonth.setMonth(state.currentMonth.getMonth() - 1);
+                        renderMiniCalendar();
+                    });
 
-        if (nextBtn) nextBtn.addEventListener('click', () => {
-            state.currentMonth.setMonth(state.currentMonth.getMonth() + 1);
-            renderMiniCalendar();
-        });
-    }
+                    if (nextBtn) nextBtn.addEventListener('click', () => {
 
-    function renderMiniCalendar() {
-        const grid = document.getElementById('mini-calendar-grid');
-        const monthYear = document.getElementById('calendar-month-year');
-        if (!grid || !monthYear) return;
+                        title.innerText = state.selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
-        monthYear.innerText = state.currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        grid.innerHTML = '';
+                        const dateStr = state.selectedDate.toISOString().split('T')[0];
+                        const events = state.data.jobs.filter(j => j.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
 
-        const year = state.currentMonth.getFullYear();
-        const month = state.currentMonth.getMonth();
-        const firstDay = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
+                        timeline.innerHTML = '';
 
-        for (let i = 0; i < firstDay; i++) {
-            grid.appendChild(document.createElement('div'));
-        }
+                        if (events.length === 0) {
+                            timeline.innerHTML = '<p style="color: #94a3b8; padding: 20px;">No events scheduled for this day.</p>';
+                            return;
+                        }
 
-        for (let i = 1; i <= daysInMonth; i++) {
-            const dayEl = document.createElement('div');
-            dayEl.className = 'calendar-day';
-            dayEl.innerText = i;
+                        events.forEach(event => {
+                            const el = document.createElement('div');
+                            el.className = 'timeline-item';
 
-            const thisDate = new Date(year, month, i);
-            if (isSameDate(thisDate, state.selectedDate)) {
-                dayEl.classList.add('selected');
-            }
+                            let iconName = 'briefcase';
+                            if (event.type === 'delivery') iconName = 'package';
+                            if (event.type === 'urgent') iconName = 'alert-circle';
+                            if (event.type === 'invoice') iconName = 'file-text';
 
-            const dateStr = thisDate.toISOString().split('T')[0];
-            const hasEvents = state.data.jobs.some(j => j.date === dateStr);
-            if (hasEvents) dayEl.classList.add('has-event');
-
-            dayEl.addEventListener('click', () => {
-                state.selectedDate = thisDate;
-                renderMiniCalendar();
-                renderDayTimeline();
-            });
-
-            grid.appendChild(dayEl);
-        }
-    }
-
-    function renderDayTimeline() {
-        const timeline = document.getElementById('day-timeline');
-        const title = document.getElementById('selected-date-title');
-        if (!timeline) return;
-
-        title.innerText = state.selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-
-        const dateStr = state.selectedDate.toISOString().split('T')[0];
-        const events = state.data.jobs.filter(j => j.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
-
-        timeline.innerHTML = '';
-
-        if (events.length === 0) {
-            timeline.innerHTML = '<p style="color: #94a3b8; padding: 20px;">No events scheduled for this day.</p>';
-            return;
-        }
-
-        events.forEach(event => {
-            const el = document.createElement('div');
-            el.className = 'timeline-item';
-
-            let iconName = 'briefcase';
-            if (event.type === 'delivery') iconName = 'package';
-            if (event.type === 'urgent') iconName = 'alert-circle';
-            if (event.type === 'invoice') iconName = 'file-text';
-
-            el.innerHTML = `
+                            el.innerHTML = `
             <div class="timeline-card" style="border-left: 4px solid ${getTypeColor(event.type)}">
                 <div class="timeline-time">${event.time}</div>
                 <div class="timeline-content">
@@ -447,74 +375,74 @@ function setupModalLogic() {
                 </div>
             </div>
         `;
-            timeline.appendChild(el);
-        });
-        lucide.createIcons();
-    }
+                            timeline.appendChild(el);
+                        });
+                        lucide.createIcons();
+                    }
 
     function renderDashboardActivity() {
-        const list = document.getElementById('dashboard-activity-list');
-        if (!list) return;
+                            const list = document.getElementById('dashboard-activity-list');
+                            if (!list) return;
 
-        list.innerHTML = '';
+                            list.innerHTML = '';
 
-        const todayStr = new Date().toISOString().split('T')[0]; // Use real today
-        const events = state.data.jobs.filter(j => j.date === todayStr);
+                            const todayStr = new Date().toISOString().split('T')[0]; // Use real today
+                            const events = state.data.jobs.filter(j => j.date === todayStr);
 
-        if (events.length === 0) list.innerHTML = '<p style="padding:10px; color:#94a3b8">Quiet day today.</p>';
+                            if (events.length === 0) list.innerHTML = '<p style="padding:10px; color:#94a3b8">Quiet day today.</p>';
 
-        events.forEach(event => {
-            const item = document.createElement('div');
-            item.style.padding = '12px';
-            item.style.borderBottom = '1px solid #f1f5f9';
-            item.style.display = 'flex';
-            item.style.justifyContent = 'space-between';
-            item.style.alignItems = 'center';
-            item.innerHTML = `
+                            events.forEach(event => {
+                                const item = document.createElement('div');
+                                item.style.padding = '12px';
+                                item.style.borderBottom = '1px solid #f1f5f9';
+                                item.style.display = 'flex';
+                                item.style.justifyContent = 'space-between';
+                                item.style.alignItems = 'center';
+                                item.innerHTML = `
             <div style="flex:1">
                 <strong>${event.time}</strong> - ${event.title} <br>
                 <small style="color:var(--text-secondary)">${event.client}</small>
             </div>
             <div style="display:flex; gap:10px; align-items:center;">
                 <span class="tag tag-${getStatusColor(event.status)}">${event.status}</span>
-                <button class="action-btn" onclick="openActionMenu(event, '${event.id}')"><i data-lucide="more-vertical"></i></button>
+                <button class="action-btn" data-id="${event.id}"><i data-lucide="more-vertical"></i></button>
             </div>
         `;
-            list.appendChild(item);
-        });
-        lucide.createIcons();
-    }
+                                list.appendChild(item);
+                            });
+                            lucide.createIcons();
+                        }
 
     function updateDashboardStats() {
-        const activeJobs = state.data.jobs.filter(j => j.status === 'pending' || j.type === 'job').length;
-        const unpaid = state.data.jobs.filter(j => j.type === 'invoice' && j.status === 'unpaid').length;
+                            const activeJobs = state.data.jobs.filter(j => j.status === 'pending' || j.type === 'job').length;
+                            const unpaid = state.data.jobs.filter(j => j.type === 'invoice' && j.status === 'unpaid').length;
 
-        const activeVal = document.querySelector('.stat-card:nth-child(1) .stat-value');
-        if (activeVal) activeVal.innerText = activeJobs;
+                            const activeVal = document.querySelector('.stat-card:nth-child(1) .stat-value');
+                            if (activeVal) activeVal.innerText = activeJobs;
 
-        const unpaidVal = document.querySelector('.stat-card:nth-child(2) .stat-value');
-        if (unpaidVal) unpaidVal.innerText = unpaid;
-    }
+                            const unpaidVal = document.querySelector('.stat-card:nth-child(2) .stat-value');
+                            if (unpaidVal) unpaidVal.innerText = unpaid;
+                        }
 
 
     // --- Utility ---
     function isSameDate(d1, d2) {
-        return d1.getFullYear() === d2.getFullYear() &&
-            d1.getMonth() === d2.getMonth() &&
-            d1.getDate() === d2.getDate();
-    }
+                            return d1.getFullYear() === d2.getFullYear() &&
+                                d1.getMonth() === d2.getMonth() &&
+                                d1.getDate() === d2.getDate();
+                        }
 
     function getTypeColor(type) {
-        if (type === 'urgent') return '#ef4444';
-        if (type === 'delivery') return '#f59e0b';
-        if (type === 'invoice') return '#3b82f6';
-        return '#0f172a';
-    }
+                            if (type === 'urgent') return '#ef4444';
+                            if (type === 'delivery') return '#f59e0b';
+                            if (type === 'invoice') return '#3b82f6';
+                            return '#0f172a';
+                        }
 
     function getStatusColor(status) {
-        if (status === 'completed') return 'green';
-        if (status === 'pending') return 'orange';
-        if (status === 'unpaid') return 'red';
-        if (status === 'arrived') return 'blue';
-        return 'blue';
-    }
+                            if (status === 'completed') return 'green';
+                            if (status === 'pending') return 'orange';
+                            if (status === 'unpaid') return 'red';
+                            if (status === 'arrived') return 'blue';
+                            return 'blue';
+                        }
