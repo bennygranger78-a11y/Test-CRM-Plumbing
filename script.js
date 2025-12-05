@@ -370,14 +370,15 @@ function setupActionMenuLogic() {
             activeActionJobId = jobId;
 
             // Position menu (Align Right)
+            // Position menu (Align Right)
             const rect = btn.getBoundingClientRect();
-            const menuWidth = 180;
-            let left = rect.right - menuWidth;
-            if (left < 10) left = 10;
 
-            // Fixed Position: No scroll offset needed
+            // Fixed Position: Anchor to Right Edge
+            // prevents overflow on small screens
+            const rightEdge = document.documentElement.clientWidth - rect.right;
+            menu.style.left = ''; // Clear left style
+            menu.style.right = `${rightEdge}px`;
             menu.style.top = `${rect.bottom + 5}px`;
-            menu.style.left = `${left}px`;
 
             // Force visibility
             menu.style.display = 'flex';
