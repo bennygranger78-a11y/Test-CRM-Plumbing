@@ -258,248 +258,251 @@ function setupNavigation() {
                     tbody.appendChild(tr);
                 });
             }
+        }); // Close addEventListener
+    }); // Close forEach
+} // Close setupNavigation
 
-            // --- Modal Logic ---
-            // --- Modal & Action Logic ---
-            let editingJobId = null; // Track if we are editing
-            let activeActionJobId = null; // Track which job the open menu belongs to
+// --- Modal Logic ---
+// --- Modal & Action Logic ---
+let editingJobId = null; // Track if we are editing
+let activeActionJobId = null; // Track which job the open menu belongs to
 
-            function setupModalLogic() {
-                const modal = document.getElementById('modal-container');
-                const closeBtn = document.getElementById('close-modal');
-                const cancelBtn = document.getElementById('cancel-modal');
-                const form = document.getElementById('new-job-form');
-                const modalTitle = document.querySelector('.modal-header h2');
-                const submitBtn = document.querySelector('.form-actions .btn-primary');
+function setupModalLogic() {
+    const modal = document.getElementById('modal-container');
+    const closeBtn = document.getElementById('close-modal');
+    const cancelBtn = document.getElementById('cancel-modal');
+    const form = document.getElementById('new-job-form');
+    const modalTitle = document.querySelector('.modal-header h2');
+    const submitBtn = document.querySelector('.form-actions .btn-primary');
 
-                const closeModal = () => {
-                    modal.classList.add('hidden');
-                    form.reset();
-                    editingJobId = null; // Reset edit mode
-                    modalTitle.innerText = "New Job";
-                    submitBtn.innerText = "Create Job";
-                };
+    const closeModal = () => {
+        modal.classList.add('hidden');
+        form.reset();
+        editingJobId = null; // Reset edit mode
+        modalTitle.innerText = "New Job";
+        submitBtn.innerText = "Create Job";
+    };
 
-                if (closeBtn) closeBtn.addEventListener('click', closeModal);
-                if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 
-                // Form Submit (Create OR Update)
-                if (form) {
-                    form.addEventListener('submit', async (e) => {
-                        e.preventDefault();
-                        const formData = new FormData(form);
+    // Form Submit (Create OR Update)
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
 
-                        const jobData = {
-                            title: formData.get('title'),
-                            client: formData.get('client'),
-                            date: formData.get('date'),
-                            time: formData.get('time'),
-                            type: formData.get('type'),
-                            duration: formData.get('duration'),
-                            // Preserve status if editing, else default
-                            status: editingJobId ? state.data.jobs.find(j => j.id === editingJobId).status : 'pending'
-                        };
+            const jobData = {
+                title: formData.get('title'),
+                client: formData.get('client'),
+                date: formData.get('date'),
+                time: formData.get('time'),
+                type: formData.get('type'),
+                duration: formData.get('duration'),
+                // Preserve status if editing, else default
+                status: editingJobId ? state.data.jobs.find(j => j.id === editingJobId).status : 'pending'
+            };
 
-                        try {
-                            if (editingJobId) {
-                                // UPDATE existing
-                                await updateDoc(doc(db, "jobs", editingJobId), jobData);
-                                console.log("Job Updated!", jobData);
-                            } else {
-                                // CREATE new
-                                // Add default phone/email for new jobs (mocking)
-                                jobData.phone = '555-0000';
-                                jobData.email = 'client@example.com';
-                                await addDoc(collection(db, "jobs"), jobData);
-                                console.log("Job Created!", jobData);
-                            }
-                            closeModal();
-                        } catch (err) {
-                            console.error("Error saving job: ", err);
-                            alert("Error saving job");
-                        }
-                    });
+            try {
+                if (editingJobId) {
+                    // UPDATE existing
+                    await updateDoc(doc(db, "jobs", editingJobId), jobData);
+                    console.log("Job Updated!", jobData);
+                } else {
+                    // CREATE new
+                    // Add default phone/email for new jobs (mocking)
+                    jobData.phone = '555-0000';
+                    jobData.email = 'client@example.com';
+                    await addDoc(collection(db, "jobs"), jobData);
+                    console.log("Job Created!", jobData);
                 }
-
-                // Expose open function for "Edit" action
-                window.openEditModal = (job) => {
-                    editingJobId = job.id;
-                    modalTitle.innerText = "Edit Job";
-                    submitBtn.innerText = "Save Changes";
-
-                    // Populate fields
-                    form.elements['title'].value = job.title;
-                    form.elements['client'].value = job.client;
-                    form.elements['date'].value = job.date;
-                    form.elements['time'].value = job.time;
-                    form.elements['type'].value = job.type;
-                    form.elements['duration'].value = job.duration || '';
-
-                    modal.classList.remove('hidden');
-                };
+                closeModal();
+            } catch (err) {
+                console.error("Error saving job: ", err);
+                alert("Error saving job");
             }
+        });
+    }
 
-            function setupActionMenuLogic() {
-                const menu = document.getElementById('action-menu');
+    // Expose open function for "Edit" action
+    window.openEditModal = (job) => {
+        editingJobId = job.id;
+        modalTitle.innerText = "Edit Job";
+        submitBtn.innerText = "Save Changes";
 
-                // 1. GLOBAL DELEGATION for opening menu
-                document.addEventListener('click', (e) => {
-                    const btn = e.target.closest('.action-btn');
-                    const menuClick = e.target.closest('.action-menu');
+        // Populate fields
+        form.elements['title'].value = job.title;
+        form.elements['client'].value = job.client;
+        form.elements['date'].value = job.date;
+        form.elements['time'].value = job.time;
+        form.elements['type'].value = job.type;
+        form.elements['duration'].value = job.duration || '';
 
-                    // Case A: Clicked an Action Button
-                    if (btn) {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        const jobId = btn.dataset.id;
-                        activeActionJobId = jobId;
+        modal.classList.remove('hidden');
+    };
+}
 
-                        // Position menu
-                        const rect = btn.getBoundingClientRect();
-                        menu.style.top = `${rect.bottom + window.scrollY + 5}px`;
-                        menu.style.left = `${rect.left + window.scrollX - 140}px`;
-                        menu.classList.remove('hidden');
-                        return;
-                    }
+function setupActionMenuLogic() {
+    const menu = document.getElementById('action-menu');
 
-                    // Case B: Clicked inside Menu
-                    if (menuClick) return;
+    // 1. GLOBAL DELEGATION for opening menu
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.action-btn');
+        const menuClick = e.target.closest('.action-menu');
 
-                    // Case C: Clicked outside
-                    if (!menu.classList.contains('hidden')) {
-                        menu.classList.add('hidden');
-                    }
-                });
+        // Case A: Clicked an Action Button
+        if (btn) {
+            e.stopPropagation();
+            e.preventDefault();
+            const jobId = btn.dataset.id;
+            activeActionJobId = jobId;
 
-                // 2. Menu Actions
-                const callBtn = document.getElementById('action-call');
-                if (callBtn) callBtn.addEventListener('click', () => {
-                    const job = state.data.jobs.find(j => j.id === activeActionJobId);
-                    if (job && job.phone) window.location.href = `tel:${job.phone}`;
-                    else alert("No phone number for this client.");
-                    menu.classList.add('hidden');
-                });
+            // Position menu
+            const rect = btn.getBoundingClientRect();
+            menu.style.top = `${rect.bottom + window.scrollY + 5}px`;
+            menu.style.left = `${rect.left + window.scrollX - 140}px`;
+            menu.classList.remove('hidden');
+            return;
+        }
 
-                const emailBtn = document.getElementById('action-email');
-                if (emailBtn) emailBtn.addEventListener('click', () => {
-                    const job = state.data.jobs.find(j => j.id === activeActionJobId);
-                    if (job && job.email) window.location.href = `mailto:${job.email}`;
-                    else alert("No email for this client.");
-                    menu.classList.add('hidden');
-                });
+        // Case B: Clicked inside Menu
+        if (menuClick) return;
 
-                const deleteBtn = document.getElementById('action-delete');
-                if (deleteBtn) deleteBtn.addEventListener('click', async () => {
-                    if (confirm("Are you sure you want to delete this job?")) {
-                        try {
-                            await deleteDoc(doc(db, "jobs", activeActionJobId));
-                        } catch (e) { console.error(e); alert("Delete failed"); }
-                    }
-                    menu.classList.add('hidden');
-                });
+        // Case C: Clicked outside
+        if (!menu.classList.contains('hidden')) {
+            menu.classList.add('hidden');
+        }
+    });
 
-                const editBtn = document.getElementById('action-edit');
-                if (editBtn) editBtn.addEventListener('click', () => {
-                    const job = state.data.jobs.find(j => j.id === activeActionJobId);
-                    if (job) window.openEditModal(job);
-                    menu.classList.add('hidden');
-                });
+    // 2. Menu Actions
+    const callBtn = document.getElementById('action-call');
+    if (callBtn) callBtn.addEventListener('click', () => {
+        const job = state.data.jobs.find(j => j.id === activeActionJobId);
+        if (job && job.phone) window.location.href = `tel:${job.phone}`;
+        else alert("No phone number for this client.");
+        menu.classList.add('hidden');
+    });
 
-                const rescheduleBtn = document.getElementById('action-reschedule');
-                if (rescheduleBtn) rescheduleBtn.addEventListener('click', () => {
-                    const job = state.data.jobs.find(j => j.id === activeActionJobId);
-                    if (job) window.openEditModal(job);
-                    menu.classList.add('hidden');
-                });
-            }
+    const emailBtn = document.getElementById('action-email');
+    if (emailBtn) emailBtn.addEventListener('click', () => {
+        const job = state.data.jobs.find(j => j.id === activeActionJobId);
+        if (job && job.email) window.location.href = `mailto:${job.email}`;
+        else alert("No email for this client.");
+        menu.classList.add('hidden');
+    });
 
-            // --- Calendar Logic ---
-            function initCalendar() {
-                renderMiniCalendar();
-                renderDayTimeline();
+    const deleteBtn = document.getElementById('action-delete');
+    if (deleteBtn) deleteBtn.addEventListener('click', async () => {
+        if (confirm("Are you sure you want to delete this job?")) {
+            try {
+                await deleteDoc(doc(db, "jobs", activeActionJobId));
+            } catch (e) { console.error(e); alert("Delete failed"); }
+        }
+        menu.classList.add('hidden');
+    });
 
-                const prevBtn = document.getElementById('prev-month');
-                const nextBtn = document.getElementById('next-month');
+    const editBtn = document.getElementById('action-edit');
+    if (editBtn) editBtn.addEventListener('click', () => {
+        const job = state.data.jobs.find(j => j.id === activeActionJobId);
+        if (job) window.openEditModal(job);
+        menu.classList.add('hidden');
+    });
 
-                if (prevBtn) prevBtn.addEventListener('click', () => {
-                    state.currentMonth.setMonth(state.currentMonth.getMonth() - 1);
-                    renderMiniCalendar();
-                });
+    const rescheduleBtn = document.getElementById('action-reschedule');
+    if (rescheduleBtn) rescheduleBtn.addEventListener('click', () => {
+        const job = state.data.jobs.find(j => j.id === activeActionJobId);
+        if (job) window.openEditModal(job);
+        menu.classList.add('hidden');
+    });
+}
 
-                if (nextBtn) nextBtn.addEventListener('click', () => {
-                    state.currentMonth.setMonth(state.currentMonth.getMonth() + 1);
-                    renderMiniCalendar();
-                });
-            }
+// --- Calendar Logic ---
+function initCalendar() {
+    renderMiniCalendar();
+    renderDayTimeline();
 
-            function renderMiniCalendar() {
-                const grid = document.getElementById('mini-calendar-grid');
-                const monthYear = document.getElementById('calendar-month-year');
-                if (!grid || !monthYear) return;
+    const prevBtn = document.getElementById('prev-month');
+    const nextBtn = document.getElementById('next-month');
 
-                monthYear.innerText = state.currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                grid.innerHTML = '';
+    if (prevBtn) prevBtn.addEventListener('click', () => {
+        state.currentMonth.setMonth(state.currentMonth.getMonth() - 1);
+        renderMiniCalendar();
+    });
 
-                const year = state.currentMonth.getFullYear();
-                const month = state.currentMonth.getMonth();
-                const firstDay = new Date(year, month, 1).getDay();
-                const daysInMonth = new Date(year, month + 1, 0).getDate();
+    if (nextBtn) nextBtn.addEventListener('click', () => {
+        state.currentMonth.setMonth(state.currentMonth.getMonth() + 1);
+        renderMiniCalendar();
+    });
+}
 
-                for (let i = 0; i < firstDay; i++) {
-                    grid.appendChild(document.createElement('div'));
-                }
+function renderMiniCalendar() {
+    const grid = document.getElementById('mini-calendar-grid');
+    const monthYear = document.getElementById('calendar-month-year');
+    if (!grid || !monthYear) return;
 
-                for (let i = 1; i <= daysInMonth; i++) {
-                    const dayEl = document.createElement('div');
-                    dayEl.className = 'calendar-day';
-                    dayEl.innerText = i;
+    monthYear.innerText = state.currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    grid.innerHTML = '';
 
-                    const thisDate = new Date(year, month, i);
-                    if (isSameDate(thisDate, state.selectedDate)) {
-                        dayEl.classList.add('selected');
-                    }
+    const year = state.currentMonth.getFullYear();
+    const month = state.currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-                    const dateStr = thisDate.toISOString().split('T')[0];
-                    const hasEvents = state.data.jobs.some(j => j.date === dateStr);
-                    if (hasEvents) dayEl.classList.add('has-event');
+    for (let i = 0; i < firstDay; i++) {
+        grid.appendChild(document.createElement('div'));
+    }
 
-                    dayEl.addEventListener('click', () => {
-                        state.selectedDate = thisDate;
-                        renderMiniCalendar();
-                        renderDayTimeline();
-                    });
+    for (let i = 1; i <= daysInMonth; i++) {
+        const dayEl = document.createElement('div');
+        dayEl.className = 'calendar-day';
+        dayEl.innerText = i;
 
-                    grid.appendChild(dayEl);
-                }
-            }
+        const thisDate = new Date(year, month, i);
+        if (isSameDate(thisDate, state.selectedDate)) {
+            dayEl.classList.add('selected');
+        }
 
-            function renderDayTimeline() {
-                const timeline = document.getElementById('day-timeline');
-                const title = document.getElementById('selected-date-title');
-                if (!timeline) return;
+        const dateStr = thisDate.toISOString().split('T')[0];
+        const hasEvents = state.data.jobs.some(j => j.date === dateStr);
+        if (hasEvents) dayEl.classList.add('has-event');
 
-                title.innerText = state.selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        dayEl.addEventListener('click', () => {
+            state.selectedDate = thisDate;
+            renderMiniCalendar();
+            renderDayTimeline();
+        });
 
-                const dateStr = state.selectedDate.toISOString().split('T')[0];
-                const events = state.data.jobs.filter(j => j.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
+        grid.appendChild(dayEl);
+    }
+}
 
-                timeline.innerHTML = '';
+function renderDayTimeline() {
+    const timeline = document.getElementById('day-timeline');
+    const title = document.getElementById('selected-date-title');
+    if (!timeline) return;
 
-                if (events.length === 0) {
-                    timeline.innerHTML = '<p style="color: #94a3b8; padding: 20px;">No events scheduled for this day.</p>';
-                    return;
-                }
+    title.innerText = state.selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
-                events.forEach(event => {
-                    const el = document.createElement('div');
-                    el.className = 'timeline-item';
+    const dateStr = state.selectedDate.toISOString().split('T')[0];
+    const events = state.data.jobs.filter(j => j.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
 
-                    let iconName = 'briefcase';
-                    if (event.type === 'delivery') iconName = 'package';
-                    if (event.type === 'urgent') iconName = 'alert-circle';
-                    if (event.type === 'invoice') iconName = 'file-text';
+    timeline.innerHTML = '';
 
-                    el.innerHTML = `
+    if (events.length === 0) {
+        timeline.innerHTML = '<p style="color: #94a3b8; padding: 20px;">No events scheduled for this day.</p>';
+        return;
+    }
+
+    events.forEach(event => {
+        const el = document.createElement('div');
+        el.className = 'timeline-item';
+
+        let iconName = 'briefcase';
+        if (event.type === 'delivery') iconName = 'package';
+        if (event.type === 'urgent') iconName = 'alert-circle';
+        if (event.type === 'invoice') iconName = 'file-text';
+
+        el.innerHTML = `
             <div class="timeline-card" style="border-left: 4px solid ${getTypeColor(event.type)}">
                 <div class="timeline-time">${event.time}</div>
                 <div class="timeline-content">
@@ -508,30 +511,30 @@ function setupNavigation() {
                 </div>
             </div>
         `;
-                    timeline.appendChild(el);
-                });
-                lucide.createIcons();
-            }
+        timeline.appendChild(el);
+    });
+    lucide.createIcons();
+}
 
-            function renderDashboardActivity() {
-                const list = document.getElementById('dashboard-activity-list');
-                if (!list) return;
+function renderDashboardActivity() {
+    const list = document.getElementById('dashboard-activity-list');
+    if (!list) return;
 
-                list.innerHTML = '';
+    list.innerHTML = '';
 
-                const todayStr = new Date().toISOString().split('T')[0]; // Use real today
-                const events = state.data.jobs.filter(j => j.date === todayStr);
+    const todayStr = new Date().toISOString().split('T')[0]; // Use real today
+    const events = state.data.jobs.filter(j => j.date === todayStr);
 
-                if (events.length === 0) list.innerHTML = '<p style="padding:10px; color:#94a3b8">Quiet day today.</p>';
+    if (events.length === 0) list.innerHTML = '<p style="padding:10px; color:#94a3b8">Quiet day today.</p>';
 
-                events.forEach(event => {
-                    const item = document.createElement('div');
-                    item.style.padding = '12px';
-                    item.style.borderBottom = '1px solid #f1f5f9';
-                    item.style.display = 'flex';
-                    item.style.justifyContent = 'space-between';
-                    item.style.alignItems = 'center';
-                    item.innerHTML = `
+    events.forEach(event => {
+        const item = document.createElement('div');
+        item.style.padding = '12px';
+        item.style.borderBottom = '1px solid #f1f5f9';
+        item.style.display = 'flex';
+        item.style.justifyContent = 'space-between';
+        item.style.alignItems = 'center';
+        item.innerHTML = `
             <div style="flex:1">
                 <strong>${event.time}</strong> - ${event.title} <br>
                 <small style="color:var(--text-secondary)">${event.client}</small>
@@ -541,46 +544,43 @@ function setupNavigation() {
                 <button class="action-btn" data-id="${event.id}"><i data-lucide="more-vertical"></i></button>
             </div>
         `;
-                    list.appendChild(item);
-                });
-                lucide.createIcons();
-            }
-
-            function updateDashboardStats() {
-                const activeJobs = state.data.jobs.filter(j => j.status === 'pending' || j.type === 'job').length;
-                const unpaid = state.data.jobs.filter(j => j.type === 'invoice' && j.status === 'unpaid').length;
-
-                const activeVal = document.querySelector('.stat-card:nth-child(1) .stat-value');
-                if (activeVal) activeVal.innerText = activeJobs;
-
-                const unpaidVal = document.querySelector('.stat-card:nth-child(2) .stat-value');
-                if (unpaidVal) unpaidVal.innerText = unpaid;
-            }
-
-
-            // --- Utility ---
-            function isSameDate(d1, d2) {
-                return d1.getFullYear() === d2.getFullYear() &&
-                    d1.getMonth() === d2.getMonth() &&
-                    d1.getDate() === d2.getDate();
-            }
-
-            function getTypeColor(type) {
-                if (type === 'urgent') return '#ef4444';
-                if (type === 'delivery') return '#f59e0b';
-                if (type === 'invoice') return '#3b82f6';
-                return '#0f172a';
-            }
-
-            function getStatusColor(status) {
-                if (status === 'completed') return 'green';
-                if (status === 'pending') return 'orange';
-                if (status === 'unpaid') return 'red';
-                if (status === 'arrived') return 'blue';
-                return 'blue';
-            }
-        } catch (e) {
-            console.error("Init Error:", e);
-            alert("Initialization Error: " + e.message);
-        }
+        list.appendChild(item);
     });
+    lucide.createIcons();
+}
+
+function updateDashboardStats() {
+    const activeJobs = state.data.jobs.filter(j => j.status === 'pending' || j.type === 'job').length;
+    const unpaid = state.data.jobs.filter(j => j.type === 'invoice' && j.status === 'unpaid').length;
+
+    const activeVal = document.querySelector('.stat-card:nth-child(1) .stat-value');
+    if (activeVal) activeVal.innerText = activeJobs;
+
+    const unpaidVal = document.querySelector('.stat-card:nth-child(2) .stat-value');
+    if (unpaidVal) unpaidVal.innerText = unpaid;
+}
+
+
+// --- Utility ---
+function isSameDate(d1, d2) {
+    return d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate();
+}
+
+
+
+function getTypeColor(type) {
+    if (type === 'urgent') return '#ef4444';
+    if (type === 'delivery') return '#f59e0b';
+    if (type === 'invoice') return '#3b82f6';
+    return '#0f172a';
+}
+
+function getStatusColor(status) {
+    if (status === 'completed') return 'green';
+    if (status === 'pending') return 'orange';
+    if (status === 'unpaid') return 'red';
+    if (status === 'arrived') return 'blue';
+    return 'blue';
+}
