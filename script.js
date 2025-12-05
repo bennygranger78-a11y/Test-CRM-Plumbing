@@ -37,32 +37,48 @@ const dateDisplay = document.getElementById('current-date-display');
 
 // --- Main Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Setup Navigation & Modals
-    setupNavigation();
-    setupModalLogic();
+    try {
+        // 1. Setup Navigation & Modals
+        setupNavigation();
+        setupModalLogic();
 
-    // 2. Set Date Header
-    dateDisplay.innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        // 2. Set Date Header
+        dateDisplay.innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-    // 3. Start Data Sync
-    syncData();
+        // 3. Start Data Sync
+        syncData().catch(err => {
+            console.error("Sync Failed:", err);
+            alert("Database Error: " + err.message + "\n\nCheck console for details.");
+        });
+    } catch (e) {
+        console.error("Init Error:", e);
+        alert("Initialization Error: " + e.message);
+    }
 });
 
 // --- Firebase Data Sync ---
 async function syncData() {
     console.log("Starting Firebase Sync...");
 
-    // Check if we need to seed data (First run check)
-    const jobsRef = collection(db, "jobs");
-    const snapshot = await getDocs(jobsRef);
+    try {
+        // Check if we need to seed data (First run check)
+        const jobsRef = collection(db, "jobs");
+        const snapshot = await getDocs(jobsRef);
 
-    if (snapshot.empty) {
-        console.log("Database empty. Seeding initial data...");
-        await seedDatabase();
+        if (snapshot.empty) {
+            console.log("Database empty. Seeding initial data...");
+            await seedDatabase();
+            alert("Database was empty. I have seeded it with sample data! Refresh the console.");
+        } else {
+            console.log("Database found with " + snapshot.size + " documents.");
+        }
+
+        // Set up Real-time Listeners
+        setupListeners();
+    } catch (error) {
+        console.error("Error accessing Firestore:", error);
+        throw error; // Re-throw to be caught by main init
     }
-
-    // Set up Real-time Listeners
-    setupListeners();
 }
 
 function setupListeners() {
