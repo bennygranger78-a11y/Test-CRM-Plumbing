@@ -558,6 +558,7 @@ function renderDashboardActivity() {
         `;
         list.appendChild(item);
     });
+    lucide.createIcons();
 }
 
 function updateDashboardStats() {
