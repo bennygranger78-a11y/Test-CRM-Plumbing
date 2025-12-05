@@ -579,3 +579,8 @@ function setupNavigation() {
                 if (status === 'arrived') return 'blue';
                 return 'blue';
             }
+        } catch (e) {
+            console.error("Init Error:", e);
+            alert("Initialization Error: " + e.message);
+        }
+    });
