@@ -137,137 +137,48 @@ function renderJobsList() {
         // Row Click -> Edit
         item.addEventListener('click', () => {
             openModal(job);
-        });
-
-        list.appendChild(item);
-    });
-}
-
-// --- Modal Logic (Phase 4 Core) ---
-function setupModalLogic() {
-    const modal = document.getElementById('modal-container');
-    const closeBtn = document.getElementById('close-modal');
-    const cancelBtn = document.getElementById('cancel-modal');
-    const form = document.getElementById('new-job-form');
-
-    const closeModal = () => modal.classList.add('hidden');
-
-    if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-
-    // Form Submit
-    if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(form);
-            const jobData = {
-                title: formData.get('title'),
-                client: formData.get('client'),
-                type: formData.get('type'),
-                date: formData.get('date'),
-                time: formData.get('time'),
-                status: 'pending' // Default new jobs to pending
-            };
-
-            // Preserve status if editing
-            if (state.editingJobId) {
-                const existing = state.data.jobs.find(j => j.id === state.editingJobId);
-                if (existing) jobData.status = existing.status;
-            }
-
-            try {
-                if (state.editingJobId) {
-                    await updateDoc(doc(db, "jobs", state.editingJobId), jobData);
-                    console.log("Updated Job");
-                } else {
-                    await addDoc(collection(db, "jobs"), jobData);
-                    console.log("Created Job");
-                }
-                closeModal();
-            } catch (err) {
-                console.error("Save failed", err);
-                alert("Error saving job.");
-            }
-        });
-    }
-
-    // Expose Global Open Function
-    window.openModal = (job = null) => {
-        const modalTitle = document.querySelector('.modal-header h2');
-        const submitBtn = document.querySelector('.form-actions .btn-primary');
-
-        form.reset(); // Clear form
-        modal.classList.remove('hidden');
-
-        if (job) {
-            // Edit Mode
-            state.editingJobId = job.id;
-            modalTitle.innerText = "Edit Job";
-            submitBtn.innerText = "Save Changes";
-
-            // Populate
-            form.elements['title'].value = job.title;
-            form.elements['client'].value = job.client;
-            form.elements['type'].value = job.type;
-            form.elements['date'].value = job.date;
-            form.elements['time'].value = job.time;
-        } else {
-            // Create Mode
-            state.editingJobId = null;
-            modalTitle.innerText = "New Job";
-            submitBtn.innerText = "Create Job";
-            // Default Date = Today
-            form.elements['date'].value = new Date().toISOString().split('T')[0];
+            if (status === 'unpaid') return 'red';
+            return 'blue';
         }
-    };
-}
-
-// --- Helpers ---
-function getStatusColor(status) {
-    if (status === 'completed') return 'green';
-    if (status === 'pending') return 'orange';
-    if (status === 'unpaid') return 'red';
-    return 'blue';
-}
 
 function initDate() {
-    const d = document.getElementById('current-date');
-    if (d) d.innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-}
+                const d = document.getElementById('current-date');
+                if (d) d.innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            }
 
 async function seedDatabase() { /* (Same as Phase 3 - omitted for brevity but assumed present if I were typing it all out. Since I am replacing the file, I MUST include it) */
-    const seedJobs = [
-        { title: 'Leaky Faucet', client: 'Alice', time: '09:00', type: 'job', status: 'pending', date: new Date().toISOString().split('T')[0] },
-        { title: 'Pipe Burst', client: 'Bob', time: '14:00', type: 'urgent', status: 'pending', date: new Date().toISOString().split('T')[0] }
-    ];
-    for (const job of seedJobs) await addDoc(collection(db, "jobs"), job);
-}
+                const seedJobs = [
+                    { title: 'Leaky Faucet', client: 'Alice', time: '09:00', type: 'job', status: 'pending', date: new Date().toISOString().split('T')[0] },
+                    { title: 'Pipe Burst', client: 'Bob', time: '14:00', type: 'urgent', status: 'pending', date: new Date().toISOString().split('T')[0] }
+                ];
+                for (const job of seedJobs) await addDoc(collection(db, "jobs"), job);
+            }
 
 // --- Dashboard Renderers (Phase 3 Kept) ---
 function renderDashboardActivity() {
-    const list = document.getElementById('dashboard-activity-list');
-    if (!list) return;
-    list.innerHTML = '';
-    const today = new Date().toISOString().split('T')[0];
-    const events = state.data.jobs.filter(j => j.date === today);
-    if (events.length === 0) { list.innerHTML = '<p class="empty-state">No jobs today.</p>'; return; }
-    events.forEach(job => {
-        const item = document.createElement('div');
-        item.className = 'list-item-card';
-        item.style.cursor = 'pointer'; // Clickable
-        item.innerHTML = `
+                const list = document.getElementById('dashboard-activity-list');
+                if (!list) return;
+                list.innerHTML = '';
+                const today = new Date().toISOString().split('T')[0];
+                const events = state.data.jobs.filter(j => j.date === today);
+                if (events.length === 0) { list.innerHTML = '<p class="empty-state">No jobs today.</p>'; return; }
+                events.forEach(job => {
+                    const item = document.createElement('div');
+                    item.className = 'list-item-card';
+                    item.style.cursor = 'pointer'; // Clickable
+                    item.innerHTML = `
             <div class="list-info"><h4>${job.time} - ${job.title}</h4><p style="color:var(--text-muted)">${job.client}</p></div>
             <div class="list-status"><span class="tag tag-${getStatusColor(job.status)}">${job.status}</span></div>
         `;
-        item.addEventListener('click', () => openModal(job)); // Allow editing from dashboard too!
-        list.appendChild(item);
-    });
-}
+                    item.addEventListener('click', () => openModal(job)); // Allow editing from dashboard too!
+                    list.appendChild(item);
+                });
+            }
 function updateDashboardStats() {
-    const active = state.data.jobs.filter(j => j.status === 'pending').length;
-    const unpaid = state.data.jobs.filter(j => j.type === 'invoice' && j.status === 'unpaid').length;
-    const aEl = document.getElementById('stat-active');
-    const uEl = document.getElementById('stat-unpaid');
-    if (aEl) aEl.innerText = active;
-    if (uEl) uEl.innerText = unpaid;
-}
+                const active = state.data.jobs.filter(j => j.status === 'pending').length;
+                const unpaid = state.data.jobs.filter(j => j.type === 'invoice' && j.status === 'unpaid').length;
+                const aEl = document.getElementById('stat-active');
+                const uEl = document.getElementById('stat-unpaid');
+                if (aEl) aEl.innerText = active;
+                if (uEl) uEl.innerText = unpaid;
+            }

@@ -101,20 +101,6 @@ body {
 .nav-divider {
     border: 0;
     border-top: 1px solid var(--primary-light);
-    margin: 10px 0;
-}
-
-.user-profile {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding-top: 20px;
-    border-top: 1px solid var(--primary-light);
-}
-
-.avatar {
-    width: 40px;
-    height: 40px;
     background: var(--accent);
     color: white;
     border-radius: 50%;
