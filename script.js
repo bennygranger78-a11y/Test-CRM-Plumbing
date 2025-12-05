@@ -368,10 +368,14 @@ function setupActionMenuLogic() {
             const jobId = btn.dataset.id;
             activeActionJobId = jobId;
 
-            // Position menu
+            // Position menu (Align Right)
             const rect = btn.getBoundingClientRect();
+            const menuWidth = 180;
+            let left = rect.right - menuWidth;
+            if (left < 10) left = 10; // Safety guard
+
             menu.style.top = `${rect.bottom + window.scrollY + 5}px`;
-            menu.style.left = `${rect.left + window.scrollX - 140}px`;
+            menu.style.left = `${left + window.scrollX}px`;
             menu.classList.remove('hidden');
             return;
         }
