@@ -824,14 +824,17 @@ select:focus {
     }
 
     .action-menu {
-        position: absolute;
-        background: var(--bg-white);
-        border: 1px solid var(--border);
+        position: fixed;
+        /* Changed from absolute to fixed to avoid scroll/parent issues */
+        background: #ffffff;
+        /* Hardcoded white to ensure opacity */
+        border: 1px solid #e2e8f0;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         border-radius: 8px;
         padding: 6px;
         width: 180px;
-        z-index: 50;
+        z-index: 9999;
+        /* Nuclear option for z-index */
         display: flex;
         flex-direction: column;
     }
