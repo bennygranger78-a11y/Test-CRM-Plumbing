@@ -148,84 +148,98 @@ function setupNavigation() {
     navItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
+            const viewName = item.getAttribute('data-view');
+            if (viewName) {
+                state.currentView = viewName;
+                renderView(viewName);
 
-            function renderView(viewName) {
-                viewContainer.innerHTML = '';
-
-                // Handle View Rendering
-                if (viewName === 'dashboard') {
-                    const template = document.getElementById('template-dashboard');
-                    viewContainer.appendChild(template.content.cloneNode(true));
-                    pageTitle.innerText = 'Dashboard Overview';
-                    requestAnimationFrame(() => {
-                        renderDashboardActivity();
-                        updateDashboardStats();
-                    });
-
-                } else if (viewName === 'calendar') {
-                    const template = document.getElementById('template-calendar');
-                    viewContainer.appendChild(template.content.cloneNode(true));
-                    pageTitle.innerText = 'Daily Schedule';
-                    requestAnimationFrame(() => initCalendar());
-
-                } else if (viewName === 'jobs') {
-                    const template = document.getElementById('template-jobs');
-                    viewContainer.appendChild(template.content.cloneNode(true));
-                    pageTitle.innerText = 'All Jobs';
-                    requestAnimationFrame(() => renderJobsView());
-
-                } else if (viewName === 'messages') {
-                    const template = document.getElementById('template-messages');
-                    viewContainer.appendChild(template.content.cloneNode(true));
-                    pageTitle.innerText = 'Inbox';
-                    requestAnimationFrame(() => renderMessagesView());
-
-                } else if (viewName === 'invoices') {
-                    const template = document.getElementById('template-invoices');
-                    viewContainer.appendChild(template.content.cloneNode(true));
-                    pageTitle.innerText = 'Quotes & Invoices';
-                    requestAnimationFrame(() => renderInvoicesView());
-
-                } else {
-                    viewContainer.innerHTML = `<div style="text-align:center; padding: 40px;">Under Construction</div>`;
-                }
-                lucide.createIcons();
+                // Update Active Class
+                navItems.forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
             }
+        });
+    });
 
-            // --- Specific View Renderers ---
-            function renderJobsView() {
-                const list = document.getElementById('jobs-list');
-                if (!list) return;
+    // Initial Render
+    renderView('dashboard');
+}
 
-                // Sort by date/time
-                const jobs = [...state.data.jobs].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+function renderView(viewName) {
+    viewContainer.innerHTML = '';
 
-                list.innerHTML = '';
-                jobs.forEach(job => {
-                    const card = document.createElement('div');
-                    card.className = 'list-item-card';
-                    card.innerHTML = `
+    // Handle View Rendering
+    if (viewName === 'dashboard') {
+        const template = document.getElementById('template-dashboard');
+        viewContainer.appendChild(template.content.cloneNode(true));
+        pageTitle.innerText = 'Dashboard Overview';
+        requestAnimationFrame(() => {
+            renderDashboardActivity();
+            updateDashboardStats();
+        });
+
+    } else if (viewName === 'calendar') {
+        const template = document.getElementById('template-calendar');
+        viewContainer.appendChild(template.content.cloneNode(true));
+        pageTitle.innerText = 'Daily Schedule';
+        requestAnimationFrame(() => initCalendar());
+
+    } else if (viewName === 'jobs') {
+        const template = document.getElementById('template-jobs');
+        viewContainer.appendChild(template.content.cloneNode(true));
+        pageTitle.innerText = 'All Jobs';
+        requestAnimationFrame(() => renderJobsView());
+
+    } else if (viewName === 'messages') {
+        const template = document.getElementById('template-messages');
+        viewContainer.appendChild(template.content.cloneNode(true));
+        pageTitle.innerText = 'Inbox';
+        requestAnimationFrame(() => renderMessagesView());
+
+    } else if (viewName === 'invoices') {
+        const template = document.getElementById('template-invoices');
+        viewContainer.appendChild(template.content.cloneNode(true));
+        pageTitle.innerText = 'Quotes & Invoices';
+        requestAnimationFrame(() => renderInvoicesView());
+
+    } else {
+        viewContainer.innerHTML = `<div style="text-align:center; padding: 40px;">Under Construction</div>`;
+    }
+    lucide.createIcons();
+}
+
+function renderJobsView() {
+    const list = document.getElementById('jobs-list');
+    if (!list) return;
+
+    // Sort by date/time
+    const jobs = [...state.data.jobs].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+
+    list.innerHTML = '';
+    jobs.forEach(job => {
+        const card = document.createElement('div');
+        card.className = 'list-item-card';
+        card.innerHTML = `
             <div class="list-info">
                 <h4>${job.title}</h4>
                 <p style="color:var(--text-secondary)">${job.client} • ${job.date} @ ${job.time}</p>
             </div>
             <div class="list-status" style="display:flex; align-items:center; gap:8px;">
                 <span class="tag tag-${getStatusColor(job.status)}">${job.status}</span>
-                <button class="action-btn" onclick="openActionMenu(event, '${job.id}')"><i data-lucide="more-vertical"></i></button>
+                <button class="action-btn" data-id="${job.id}"><i data-lucide="more-vertical"></i></button>
             </div>
         `;
-                    list.appendChild(card);
-                });
-            }
+        list.appendChild(card);
+    });
+}
 
-            function renderMessagesView() {
-                const list = document.getElementById('messages-list');
-                if (!list) return;
+function renderMessagesView() {
+    const list = document.getElementById('messages-list');
+    if (!list) return;
 
-                state.data.messages.forEach(msg => {
-                    const card = document.createElement('div');
-                    card.className = 'list-item-card';
-                    card.innerHTML = `
+    state.data.messages.forEach(msg => {
+        const card = document.createElement('div');
+        card.className = 'list-item-card';
+        card.innerHTML = `
             <div class="list-info">
                 <h4>${msg.from}</h4>
                 <p>${msg.text}</p>
@@ -234,33 +248,30 @@ function setupNavigation() {
                 <p style="font-size:0.8rem; color:var(--text-secondary)">${msg.date} ${msg.time}</p>
             </div>
         `;
-                    list.appendChild(card);
-                });
-            }
+        list.appendChild(card);
+    });
+}
 
-            function renderInvoicesView() {
-                const tbody = document.getElementById('invoices-list');
-                if (!tbody) return;
+function renderInvoicesView() {
+    const tbody = document.getElementById('invoices-list');
+    if (!tbody) return;
 
-                // Filter for invoices/quotes
-                const invoices = state.data.jobs.filter(j => j.type === 'invoice' || j.type === 'quote');
+    // Filter for invoices/quotes
+    const invoices = state.data.jobs.filter(j => j.type === 'invoice' || j.type === 'quote');
 
-                tbody.innerHTML = '';
-                invoices.forEach(inv => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
+    tbody.innerHTML = '';
+    invoices.forEach(inv => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
             <td>#${inv.id ? inv.id.substring(0, 6) : 'PEND'}...</td>
             <td>${inv.client}</td>
             <td>${inv.date}</td>
             <td><span class="tag tag-${inv.status === 'unpaid' ? 'red' : 'green'}">${inv.status}</span></td>
             <td><strong>$150.00</strong></td>
         `;
-                    tbody.appendChild(tr);
-                });
-            }
-        }); // Close addEventListener
-    }); // Close forEach
-} // Close setupNavigation
+        tbody.appendChild(tr);
+    });
+}
 
 // --- Modal Logic ---
 // --- Modal & Action Logic ---
