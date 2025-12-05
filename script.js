@@ -363,6 +363,7 @@ function setupActionMenuLogic() {
 
         // Case A: Clicked an Action Button
         if (btn) {
+            console.log("Action Button Clicked:", btn.dataset.id); // DEBUG
             e.stopPropagation();
             e.preventDefault();
             const jobId = btn.dataset.id;
